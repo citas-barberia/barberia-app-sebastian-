@@ -1,19 +1,20 @@
-from flask import Flask, render_template, request, redirect, flash, url_for, jsonify, make_response
+from flask import Flask, render_template, request, redirect, flash, url_for, jsonify, make_response, session
 from datetime import date, timedelta, datetime
 from zoneinfo import ZoneInfo
 import os
-TZ = ZoneInfo(os.getenv("TZ", "America/Costa_Rica"))
 import uuid
 import requests
 import time  # anti-duplicados webhook
 
+TZ = ZoneInfo(os.getenv("TZ", "America/Costa_Rica"))
+
 app = Flask(__name__)
-app.secret_key = "secret_key"
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "cambia_esto_en_render")
 
 # =========================
 # CONFIG WHATSAPP (Meta)
 # =========================
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "barberia123")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "cambia_verify_token")
 NUMERO_BARBERO = os.getenv("NUMERO_BARBERO", "50660840460")
 DOMINIO = os.getenv("DOMINIO", "https://barberia-app-1.onrender.com")
 
@@ -21,7 +22,7 @@ DOMINIO = os.getenv("DOMINIO", "https://barberia-app-1.onrender.com")
 NOMBRE_BARBERO = os.getenv("NOMBRE_BARBERO", "Erickson")
 
 # ✅ Clave para entrar al panel del barbero
-CLAVE_BARBERO = os.getenv("CLAVE_BARBERO", "1234")
+CLAVE_BARBERO = os.getenv("CLAVE_BARBERO", "cambia_esta_clave")
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
@@ -48,7 +49,6 @@ def enviar_whatsapp(to_numero: str, mensaje: str) -> bool:
         print("⚠️ Faltan WHATSAPP_TOKEN o PHONE_NUMBER_ID en variables de entorno")
         return False
 
-    # normalizar numero (sin + ni espacios)
     to_numero = str(to_numero).replace("+", "").replace(" ", "").strip()
 
     url = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
@@ -65,8 +65,6 @@ def enviar_whatsapp(to_numero: str, mensaje: str) -> bool:
 
     try:
         r = requests.post(url, headers=headers, json=data, timeout=15)
-
-        # ✅ LOG SIEMPRE (para saber si realmente está enviando)
         print("📤 WhatsApp -> to:", to_numero, "| status:", r.status_code)
 
         if r.status_code >= 400:
@@ -87,12 +85,10 @@ def es_numero_whatsapp(valor: str) -> bool:
 
 
 def barbero_autenticado() -> bool:
-    """✅ Si el barbero ya metió la clave, queda guardada en cookie."""
-    return request.cookies.get("clave_barbero") == CLAVE_BARBERO
+    return session.get("barbero_ok") is True
 
 
 def _precio_a_int(valor):
-    """✅ Convierte precio a int aunque venga como '₡5000' o '5000' o None."""
     if valor is None:
         return 0
     s = str(valor)
@@ -101,24 +97,19 @@ def _precio_a_int(valor):
         return int(float(s))
     except:
         return 0
+
+
 def _hora_ampm_a_time(hora_str: str):
-    """
-    Convierte '9:00am' o '12:30pm' a datetime.time
-    """
     if not hora_str:
         return None
     s = str(hora_str).strip().lower().replace(" ", "")
     try:
-        # formato tipo 9:00am / 12:30pm
         return datetime.strptime(s, "%I:%M%p").time()
     except:
         return None
 
 
 def _cita_a_datetime(fecha_str: str, hora_str: str):
-    """
-    Combina fecha YYYY-MM-DD + hora '9:00am' => datetime con timezone CR
-    """
     if not fecha_str or not hora_str:
         return None
     try:
@@ -135,6 +126,7 @@ def _cita_a_datetime(fecha_str: str, hora_str: str):
 def _now_cr():
     return datetime.now(TZ)
 
+
 # =========================
 # Servicios y horas
 # =========================
@@ -146,7 +138,6 @@ servicios = {
 }
 
 
-# ✅ Generador de horas cada 30 min en formato 9:00am, 9:30am, etc.
 def generar_horas(inicio_h, inicio_m, fin_h, fin_m):
     horas = []
     t = inicio_h * 60 + inicio_m
@@ -167,8 +158,8 @@ def generar_horas(inicio_h, inicio_m, fin_h, fin_m):
     return horas
 
 
-# Default (Lun-Sáb): 9:00am a 7:30pm
-HORAS_BASE = generar_horas(8, 0, 19, 30)
+# ✅ Uniforme con el resto del sistema
+HORAS_BASE = generar_horas(9, 0, 19, 30)
 
 
 # =========================
@@ -178,7 +169,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 USAR_SUPABASE = bool(SUPABASE_URL and SUPABASE_KEY)
-SUPABASE_TIMEOUT = int(os.getenv("SUPABASE_TIMEOUT", "10"))  # ✅ nunca se cuelga más de 10s
+SUPABASE_TIMEOUT = int(os.getenv("SUPABASE_TIMEOUT", "10"))
 
 if USAR_SUPABASE:
     print("✅ Supabase configurado (REST con timeout)")
@@ -307,7 +298,7 @@ def leer_citas_db():
     url = _supabase_table_url("citas")
     data = _supabase_request("GET", url, params={"select": "*"})
     if data is None:
-        return None  # para fallback
+        return None
     citas = []
     for r in data:
         citas.append({
@@ -335,7 +326,7 @@ def guardar_cita_db(cliente, cliente_id, barbero, servicio, precio, fecha, hora)
         "hora": hora
     }
     res = _supabase_request("POST", url, json_body=body, extra_headers={"Prefer": "return=minimal"})
-    return res is not None or True
+    return res is not None
 
 
 def buscar_cita_db_por_id(id_cita):
@@ -359,13 +350,13 @@ def buscar_cita_db_por_id(id_cita):
 def cancelar_cita_db_por_id(id_cita):
     url = _supabase_table_url("citas")
     res = _supabase_request("PATCH", url, params={"id": f"eq.{id_cita}"}, json_body={"servicio": "CITA CANCELADA"})
-    return res is not None or True
+    return res is not None
 
 
 def marcar_atendida_db_por_id(id_cita):
     url = _supabase_table_url("citas")
     res = _supabase_request("PATCH", url, params={"id": f"eq.{id_cita}"}, json_body={"servicio": "CITA ATENDIDA"})
-    return res is not None or True
+    return res is not None
 
 
 # ==========================================================
@@ -444,7 +435,6 @@ def webhook():
     try:
         value = data["entry"][0]["changes"][0]["value"]
 
-        # Ignorar eventos que NO son mensajes
         if "messages" not in value:
             return "ok", 200
 
@@ -452,7 +442,6 @@ def webhook():
         numero = msg.get("from")
         msg_id = msg.get("id")
 
-        # limpiar viejos
         ahora = time.time()
         for k, t in list(PROCESADOS.items()):
             if ahora - t > TTL_MSG:
@@ -512,22 +501,19 @@ def index():
 
     citas_todas = leer_citas()
 
-    # ✅ Solo citas de este cliente
     citas_cliente_all = [c for c in citas_todas if str(c.get("cliente_id", "")) == str(cliente_id)]
 
-    # ✅ “Borrar cada mes” = mostrar SOLO citas del mes actual
     hoy_dt = _now_cr()
-    mes_actual = hoy_dt.strftime("%Y-%m")  # ejemplo 2026-02
+    mes_actual = hoy_dt.strftime("%Y-%m")
     citas_cliente = [c for c in citas_cliente_all if str(c.get("fecha", "")).startswith(mes_actual)]
 
-    # ✅ Calcular si puede cancelar: hasta 12h después de la hora agendada
     for c in citas_cliente:
         cita_dt = _cita_a_datetime(c.get("fecha"), c.get("hora"))
         if cita_dt:
             limite = cita_dt + timedelta(hours=12)
             c["cancelable"] = (hoy_dt <= limite)
         else:
-            c["cancelable"] = True  # si algo raro pasa, no lo bloqueamos
+            c["cancelable"] = True
 
     if request.method == "POST":
         cliente = request.form.get("cliente", "").strip()
@@ -658,7 +644,6 @@ Si deseas agendar de nuevo, entra al link.
     return resp
 
 
-# ✅ Marcar atendida (SOLO BARBERO)
 @app.route("/atendida", methods=["POST"])
 def atendida():
     if not barbero_autenticado():
@@ -672,7 +657,6 @@ def atendida():
     return redirect(url_for("barbero"))
 
 
-# ✅ Panel del barbero protegido por clave (cookie)
 @app.route("/barbero", methods=["GET"])
 def barbero():
     clave = request.args.get("clave")
@@ -681,9 +665,8 @@ def barbero():
         return _render_panel_barbero()
 
     if clave == CLAVE_BARBERO:
-        resp = make_response(_render_panel_barbero())
-        resp.set_cookie("clave_barbero", CLAVE_BARBERO, max_age=60 * 60 * 24 * 7)  # 7 días
-        return resp
+        session["barbero_ok"] = True
+        return _render_panel_barbero()
 
     return """
     <div style='font-family:Arial;max-width:420px;margin:40px auto;padding:20px;border:1px solid #ddd;border-radius:12px;'>
@@ -699,16 +682,14 @@ def barbero():
 def _render_panel_barbero():
     citas = leer_citas()
 
-    # filtros: hoy | manana | todas
     solo = request.args.get("solo", "hoy")
-    # estado: activas | atendidas | canceladas | todas
     estado = request.args.get("estado", "activas")
     q = (request.args.get("q") or "").strip().lower()
 
-    hoy = date.today().strftime("%Y-%m-%d")
-    manana = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d")
+    hoy_date = _now_cr().date()
+    hoy = hoy_date.strftime("%Y-%m-%d")
+    manana = (hoy_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # ✅ Base por día seleccionado
     if solo == "hoy":
         citas_dia = [c for c in citas if str(c.get("fecha")) == hoy]
     elif solo == "manana":
@@ -716,7 +697,6 @@ def _render_panel_barbero():
     else:
         citas_dia = list(citas)
 
-    # ✅ Contadores (según el filtro de día)
     cant_total = len(citas_dia)
     cant_canceladas = sum(1 for c in citas_dia if c.get("servicio") == "CITA CANCELADA")
     cant_atendidas = sum(1 for c in citas_dia if c.get("servicio") == "CITA ATENDIDA")
@@ -728,7 +708,6 @@ def _render_panel_barbero():
         if c.get("servicio") == "CITA ATENDIDA"
     )
 
-    # ✅ Historial mensual 2026 (todas las citas del 2026, NO solo del día)
     meses = {str(i).zfill(2): {
         "mes": str(i).zfill(2),
         "total": 0,
@@ -754,7 +733,6 @@ def _render_panel_barbero():
 
     historial_2026 = [meses[m] for m in sorted(meses.keys())]
 
-    # ✅ Aplicar filtro estado + búsqueda al listado mostrado
     citas_filtradas = list(citas_dia)
 
     if estado == "activas":
@@ -791,6 +769,7 @@ def _render_panel_barbero():
         historial_2026=historial_2026
     )
 
+
 @app.route("/barbero/historial", methods=["GET"])
 def barbero_historial():
     if not barbero_autenticado():
@@ -798,7 +777,6 @@ def barbero_historial():
 
     citas = leer_citas()
 
-    # Historial mensual 2026
     meses = {str(i).zfill(2): {
         "mes": str(i).zfill(2),
         "total": 0,
@@ -829,6 +807,8 @@ def barbero_historial():
         historial_2026=historial_2026,
         nombre_barbero=NOMBRE_BARBERO
     )
+
+
 @app.route("/citas_json")
 def citas_json():
     citas = leer_citas()
@@ -843,15 +823,12 @@ def horas():
     if not fecha or not barbero:
         return jsonify([])
 
-    # Día de la semana: lunes=0 ... domingo=6
     fecha_obj = datetime.strptime(fecha, "%Y-%m-%d")
     dia_semana = fecha_obj.weekday()
 
-    # ✅ Miércoles: no trabaja
     if dia_semana == 2:
         return jsonify([])
 
-    # ✅ Domingo: 9:00am a 3:00pm
     if dia_semana == 6:
         horas_base = generar_horas(9, 0, 15, 0)
     else:
@@ -869,7 +846,6 @@ def horas():
 
     disponibles = [h for h in horas_base if h not in ocupadas]
 
-    # ✅ Bloquear horas que YA pasaron si la fecha es HOY
     hoy_str = _now_cr().strftime("%Y-%m-%d")
     if str(fecha) == hoy_str:
         ahora = _now_cr()
