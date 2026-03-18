@@ -4,13 +4,11 @@ from zoneinfo import ZoneInfo
 import os
 import uuid
 import requests
-import urllib.parse
 
-# Configuración de Zona Horaria Costa Rica
+# Configuración Costa Rica
 TZ = ZoneInfo("America/Costa_Rica")
-
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "barberia_ultra_safe_2026")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "barberia_id_system_2026")
 
 # --- Credenciales ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -18,8 +16,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
-# 1. Definición Maestra de Barberos
-# IMPORTANTE: El nombre aquí debe ser EXACTO al que usas en la URL
+# Diccionario Maestro (Aquí vinculamos el ID con el nombre para mostrar)
 BARBEROS = {
     "1": {"nombre": "Sebastian", "telefono": "50660840460"},
     "2": {"nombre": "Barbero 2", "telefono": "50600000000"},
@@ -36,7 +33,7 @@ SERVICIOS_DATA = {
 def _supabase_headers():
     return {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
 
-# --- RUTAS ---
+# --- RUTAS CLIENTE ---
 
 @app.route("/")
 def index():
@@ -49,23 +46,30 @@ def index():
 @app.route("/", methods=["POST"])
 def agendar():
     cliente = request.form.get("cliente", "").strip()
-    b_id = request.form.get("barbero_id")
+    b_id = request.form.get("barbero_id") # Recibimos "1", "2" o "3"
     serv_nom = request.form.get("servicio")
     fecha = request.form.get("fecha")
     hora = request.form.get("hora")
     c_id = request.form.get("cliente_id")
 
-    # Obtenemos el nombre y le quitamos espacios invisibles
     b_info = BARBEROS.get(b_id, BARBEROS["1"])
-    nombre_limpio = b_info["nombre"].strip()
-
+    
+    # GUARDAMOS EL ID EN LA COLUMNA BARBERO (Más seguro)
     url = f"{SUPABASE_URL}/rest/v1/citas"
     payload = {
-        "cliente": cliente, "cliente_id": c_id, "barbero": nombre_limpio,
+        "cliente": cliente, "cliente_id": c_id, "barbero": b_id, 
         "servicio": serv_nom, "precio": SERVICIOS_DATA[serv_nom]["precio"], 
         "fecha": fecha, "hora": hora
     }
     requests.post(url, headers=_supabase_headers(), json=payload)
+    
+    # Notificación WhatsApp
+    msg = f"💈 Cita Nueva\nBarbero: {b_info['nombre']}\nCliente: {cliente}\nHora: {hora}"
+    url_wa = f"https://graph.facebook.com/v22.0/{PHONE_NUMBER_ID}/messages"
+    headers_wa = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+    requests.post(url_wa, headers=headers_wa, json={"messaging_product":"whatsapp","to":b_info['telefono'],"type":"text","text":{"body":msg}})
+
+    flash("Cita agendada con éxito")
     return redirect(url_for('index'))
 
 @app.route("/horas")
@@ -73,10 +77,10 @@ def horas():
     fecha, b_id, serv_nom = request.args.get("fecha"), request.args.get("barbero_id"), request.args.get("servicio")
     if not all([fecha, b_id, serv_nom]): return jsonify([])
 
-    b_nom = BARBEROS.get(b_id, {}).get("nombre", "").strip()
     dur_n = SERVICIOS_DATA.get(serv_nom, {"duracion": 30})["duracion"]
 
-    url = f"{SUPABASE_URL}/rest/v1/citas?barbero=eq.{b_nom}&fecha=eq.{fecha}&servicio=neq.CITA%20CANCELADA"
+    # Buscamos por ID
+    url = f"{SUPABASE_URL}/rest/v1/citas?barbero=eq.{b_id}&fecha=eq.{fecha}&servicio=neq.CITA%20CANCELADA"
     try:
         res = requests.get(url, headers=_supabase_headers()).json()
         ocupados = []
@@ -102,20 +106,16 @@ def horas():
         curr += timedelta(minutes=15)
     return jsonify(disponibles)
 
-@app.route("/panel/<nombre>")
-def panel_barbero(nombre):
-    # Decodificar y limpiar el nombre de la URL
-    nombre_url = urllib.parse.unquote(nombre).strip()
-    
-    # IMPORTANTE: Buscamos en la base de datos de forma exacta
-    url = f"{SUPABASE_URL}/rest/v1/citas?barbero=eq.{nombre_url}&order=fecha.asc,hora.asc"
-    
-    try:
-        r = requests.get(url, headers=_supabase_headers())
-        res = r.json()
-        if not isinstance(res, list): res = []
-    except: res = []
+# --- RUTAS BARBERO ---
 
+@app.route("/panel/<id_barbero>")
+def panel_barbero(id_barbero):
+    # Buscamos en la DB por el ID (1, 2 o 3)
+    url = f"{SUPABASE_URL}/rest/v1/citas?barbero=eq.{id_barbero}&order=fecha.asc,hora.asc"
+    res = requests.get(url, headers=_supabase_headers()).json()
+    if not isinstance(res, list): res = []
+
+    nombre_real = BARBEROS.get(id_barbero, {"nombre": "Desconocido"})["nombre"]
     hoy_cr = datetime.now(TZ).strftime("%Y-%m-%d")
     citas_hoy = [c for c in res if str(c.get("fecha")) == hoy_cr]
     
@@ -123,7 +123,7 @@ def panel_barbero(nombre):
                    for c in citas_hoy if c.get("servicio") == "CITA ATENDIDA")
 
     stats = {
-        "nombre": nombre_url, 
+        "nombre": nombre_real, 
         "total": len(citas_hoy), 
         "ganancia": ganancia,
         "activas": len([c for c in citas_hoy if c.get("servicio") not in ["CITA ATENDIDA", "CITA CANCELADA"]])
