@@ -2,105 +2,79 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Agendar Cita - Multi-Barbero</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbería Sebastian</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #0f0f10; color: #f5f5f5; margin: 0; padding: 15px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 480px; background: #1b1b1c; padding: 25px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); margin-top: 10px; }
-        h1 { color: #D4AF37; text-align: center; font-size: 26px; margin-bottom: 25px; line-height: 1.3; }
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 8px; font-size: 14px; color: #D4AF37; font-weight: 600; }
-        input, select { width: 100%; padding: 16px; background: #242425; border: 1px solid #333; border-radius: 14px; color: #fff; font-size: 16px; outline: none; transition: 0.3s; }
-        input:focus, select:focus { border-color: #D4AF37; background: #2a2a2b; }
-        button.btn-principal { width: 100%; padding: 18px; background: #D4AF37; color: #000; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .flash { background: #D4AF37; color: #000; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+        body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; justify-content: center; }
+        .card { background: #161616; padding: 30px; border-radius: 25px; width: 100%; max-width: 400px; border: 1px solid #222; }
+        h1 { color: #d4af37; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold; }
+        input, select { width: 100%; padding: 15px; background: #222; border: 1px solid #333; color: #fff; border-radius: 12px; font-size: 16px; }
+        button { width: 100%; padding: 18px; background: #d4af37; color: #000; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; margin-top: 10px; }
+        .flash { background: #d4af37; color: #000; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h1>RESERVAR CITA 💈</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+        {% endwith %}
+        <form action="/" method="POST">
+            <div class="form-group">
+                <label>Tu Nombre:</label>
+                <input type="text" name="cliente" required placeholder="Nombre completo">
+            </div>
+            <div class="form-group">
+                <label>Barbero:</label>
+                <select name="barbero_id" id="barbero_id" required onchange="actualizar()">
+                    <option value="" disabled selected>Selecciona barbero</option>
+                    {% for id, b in barberos.items() %}
+                    <option value="{{ id }}">{{ b.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Servicio:</label>
+                <select name="servicio" id="servicio" required onchange="actualizar()">
+                    <option value="" disabled selected>Selecciona servicio</option>
+                    {% for s, info in servicios.items() %}
+                    <option value="{{ s }}">{{ s }} ({{ info.duracion }} min)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fecha:</label>
+                <input type="date" name="fecha" id="fecha" value="{{ hoy_iso }}" min="{{ hoy_iso }}" required onchange="actualizar()">
+            </div>
+            <div class="form-group">
+                <label>Hora:</label>
+                <select name="hora" id="hora_select" required>
+                    <option value="">Elige arriba...</option>
+                </select>
+            </div>
+            <button type="submit">CONFIRMAR CITA</button>
+        </form>
+    </div>
 
-<div class="container">
-    <h1>Agenda tu cita 💈</h1>
-
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-
-    <form action="/" method="POST">
-        <input type="hidden" name="cliente_id" value="{{ cliente_id }}">
-
-        <div class="form-group">
-            <label>Tu Nombre:</label>
-            <input type="text" name="cliente" placeholder="Escribe tu nombre completo" required>
-        </div>
-
-        <div class="form-group">
-            <label>Selecciona tu Barbero:</label>
-            <select name="barbero_id" id="barbero_id" required onchange="actualizarHoras()">
-                <option value="" disabled selected>¿Quién te atenderá hoy?</option>
-                {% for id, info in barberos.items() %}
-                <option value="{{ id }}">{{ info.nombre }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Servicio:</label>
-            <select name="servicio" id="servicio" required onchange="actualizarHoras()">
-                <option value="" disabled selected>¿Qué servicio buscas?</option>
-                {% for nombre, info in servicios.items() %}
-                <option value="{{ nombre }}">{{ nombre }} - ({{ info.duracion }} min)</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Fecha:</label>
-            <input type="date" id="fecha" name="fecha" value="{{ hoy_iso }}" min="{{ hoy_iso }}" required onchange="actualizarHoras()">
-        </div>
-
-        <div class="form-group">
-            <label>Hora disponible:</label>
-            <select name="hora" id="hora_select" required>
-                <option value="">Selecciona barbero y servicio...</option>
-            </select>
-        </div>
-
-        <button type="submit" class="btn-principal">Reservar Espacio</button>
-    </form>
-</div>
-
-<script>
-async function actualizarHoras() {
-    const b_id = document.getElementById('barbero_id').value;
-    const serv = document.getElementById('servicio').value;
-    const fecha = document.getElementById('fecha').value;
-    const select = document.getElementById('hora_select');
-
-    if (!b_id || !serv || !fecha) return;
-
-    select.innerHTML = '<option value="">Buscando disponibilidad...</option>';
-
-    try {
-        const res = await fetch(`/horas?barbero_id=${b_id}&servicio=${serv}&fecha=${fecha}`);
-        const horas = await res.json();
-
-        select.innerHTML = '';
-        if (horas.length === 0) {
-            select.innerHTML = '<option value="">No hay campos para este servicio</option>';
-        } else {
-            select.innerHTML = '<option value="" disabled selected>Selecciona la hora</option>';
-            horas.forEach(h => {
-                const opt = document.createElement('option');
-                opt.value = h; opt.textContent = h;
-                select.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        select.innerHTML = '<option value="">Error al conectar</option>';
+    <script>
+    async function actualizar() {
+        const b = document.getElementById('barbero_id').value;
+        const s = document.getElementById('servicio').value;
+        const f = document.getElementById('fecha').value;
+        const sel = document.getElementById('hora_select');
+        if(!b || !s || !f) return;
+        sel.innerHTML = '<option>Cargando...</option>';
+        const r = await fetch(`/horas?barbero_id=${b}&servicio=${s}&fecha=${f}`);
+        const horas = await r.json();
+        sel.innerHTML = horas.length ? '' : '<option value="">Sin espacio</option>';
+        horas.forEach(h => {
+            let o = document.createElement('option');
+            o.value = h; o.textContent = h;
+            sel.appendChild(o);
+        });
     }
-}
-</script>
-
+    </script>
 </body>
 </html>
