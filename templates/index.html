@@ -6,55 +6,65 @@
     <title>Barbería Sebastian</title>
     <style>
         body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; justify-content: center; }
-        .card { background: #161616; padding: 30px; border-radius: 25px; width: 100%; max-width: 400px; border: 1px solid #222; }
-        h1 { color: #d4af37; text-align: center; margin-bottom: 30px; }
+        .card { background: #161616; padding: 30px; border-radius: 25px; width: 100%; max-width: 440px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #d4af37; text-align: center; margin-bottom: 30px; font-size: 26px; }
         .form-group { margin-bottom: 20px; }
-        label { display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold; }
-        input, select { width: 100%; padding: 15px; background: #222; border: 1px solid #333; color: #fff; border-radius: 12px; font-size: 16px; }
-        button { width: 100%; padding: 18px; background: #d4af37; color: #000; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; margin-top: 10px; }
-        .flash { background: #d4af37; color: #000; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        label { display: block; color: #d4af37; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+        input, select { width: 100%; padding: 15px; background: #222; border: 1px solid #333; color: #fff; border-radius: 12px; font-size: 16px; outline: none; }
+        input:focus, select:focus { border-color: #d4af37; }
+        button { width: 100%; padding: 18px; background: #d4af37; color: #000; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 18px; text-transform: uppercase; margin-top: 10px; }
+        .flash { background: #d4af37; color: #000; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 25px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>RESERVAR CITA 💈</h1>
+        <h1>AGENDAR CITA 💈</h1>
+        
         {% with messages = get_flashed_messages() %}
             {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
         {% endwith %}
+
         <form action="/" method="POST">
+            <input type="hidden" name="cliente_id" value="{{ cliente_id }}">
+
             <div class="form-group">
                 <label>Tu Nombre:</label>
-                <input type="text" name="cliente" required placeholder="Nombre completo">
+                <input type="text" name="cliente" required placeholder="Escribe tu nombre">
             </div>
+
             <div class="form-group">
                 <label>Barbero:</label>
                 <select name="barbero_id" id="barbero_id" required onchange="actualizar()">
-                    <option value="" disabled selected>Selecciona barbero</option>
+                    <option value="" disabled selected>¿Quién te atiende?</option>
                     {% for id, b in barberos.items() %}
                     <option value="{{ id }}">{{ b.nombre }}</option>
                     {% endfor %}
                 </select>
             </div>
+
             <div class="form-group">
                 <label>Servicio:</label>
                 <select name="servicio" id="servicio" required onchange="actualizar()">
-                    <option value="" disabled selected>Selecciona servicio</option>
+                    <option value="" disabled selected>¿Qué servicio buscas?</option>
                     {% for s, info in servicios.items() %}
                     <option value="{{ s }}">{{ s }} ({{ info.duracion }} min)</option>
                     {% endfor %}
                 </select>
             </div>
+
             <div class="form-group">
                 <label>Fecha:</label>
                 <input type="date" name="fecha" id="fecha" value="{{ hoy_iso }}" min="{{ hoy_iso }}" required onchange="actualizar()">
             </div>
+
             <div class="form-group">
-                <label>Hora:</label>
+                <label>Hora disponible:</label>
                 <select name="hora" id="hora_select" required>
-                    <option value="">Elige arriba...</option>
+                    <option value="">Elige barbero y servicio...</option>
                 </select>
             </div>
-            <button type="submit">CONFIRMAR CITA</button>
+
+            <button type="submit">Confirmar Espacio</button>
         </form>
     </div>
 
@@ -64,16 +74,24 @@
         const s = document.getElementById('servicio').value;
         const f = document.getElementById('fecha').value;
         const sel = document.getElementById('hora_select');
+        
         if(!b || !s || !f) return;
-        sel.innerHTML = '<option>Cargando...</option>';
-        const r = await fetch(`/horas?barbero_id=${b}&servicio=${s}&fecha=${f}`);
-        const horas = await r.json();
-        sel.innerHTML = horas.length ? '' : '<option value="">Sin espacio</option>';
-        horas.forEach(h => {
-            let o = document.createElement('option');
-            o.value = h; o.textContent = h;
-            sel.appendChild(o);
-        });
+        
+        sel.innerHTML = '<option>Buscando...</option>';
+        
+        try {
+            const r = await fetch(`/horas?barbero_id=${b}&servicio=${s}&fecha=${f}&t=${Date.now()}`);
+            const horas = await r.json();
+            
+            sel.innerHTML = horas.length ? '<option value="" disabled selected>Selecciona la hora</option>' : '<option value="">Sin disponibilidad</option>';
+            horas.forEach(h => {
+                let o = document.createElement('option');
+                o.value = h; o.textContent = h;
+                sel.appendChild(o);
+            });
+        } catch(e) {
+            sel.innerHTML = '<option value="">Error de conexión</option>';
+        }
     }
     </script>
 </body>
