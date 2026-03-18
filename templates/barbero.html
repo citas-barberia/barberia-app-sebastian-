@@ -1,98 +1,64 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Panel Privado - {{ stats.nombre }}</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Panel: {{ stats.nombre }}</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; background: #0f0f10; color: #f5f5f5; font-family: 'Segoe UI', Arial, sans-serif; min-height: 100vh; }
-    .box { width: calc(100% - 20px); max-width: 1200px; margin: 10px auto; padding: 16px; background: #1b1b1c; border-radius: 18px; box-shadow: 0 12px 30px rgba(0,0,0,.45); }
-    
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-    h1 { margin: 0; color: #D4AF37; font-size: 32px; line-height: 1.1; }
-    
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .card { background: #242425; border: 1px solid #2e2e2f; border-radius: 16px; padding: 14px; text-align: center; }
-    .t { opacity: .85; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #D4AF37; }
-    .v { font-size: 24px; margin-top: 5px; font-weight: 700; }
+    body { margin: 0; background: #0f0f10; color: #f5f5f5; font-family: 'Segoe UI', sans-serif; }
+    .box { width: calc(100% - 20px); max-width: 1200px; margin: 10px auto; padding: 20px; background: #1b1b1c; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    h1 { color: #D4AF37; margin: 0; font-size: 28px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 20px 0; }
+    .card { background: #242425; border: 1px solid #333; border-radius: 15px; padding: 15px; text-align: center; }
+    .t { opacity: .7; font-size: 11px; text-transform: uppercase; color: #D4AF37; }
+    .v { font-size: 22px; font-weight: bold; margin-top: 5px; }
     .money { color: #28a745; }
-
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
-    select, input { flex: 1; min-width: 120px; padding: 12px; border-radius: 12px; background: #121213; color: #fff; border: 1px solid #2f2f30; }
-    
-    .btn-accion { padding: 12px; border-radius: 12px; border: none; background: #D4AF37; color: #111; font-weight: 700; cursor: pointer; width: 100%; }
-
-    /* Estilo de Citas */
-    .cita-item { background: #242425; border: 1px solid #2e2e2f; border-radius: 16px; padding: 16px; margin-bottom: 10px; border-left: 4px solid #D4AF37; }
-    .cli-name { font-size: 18px; font-weight: 700; color: #D4AF37; }
-    .cli-meta { font-size: 13px; opacity: 0.7; margin-top: 5px; }
-    
-    .tag { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; float: right; }
-    .ok { background: #28a745; color: #fff; }
-    .done { background: #007bff; color: #fff; }
-    .bad { background: #dc3545; color: #fff; }
-
-    @media (min-width: 800px) {
-      .citas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    }
+    select { width: 100%; padding: 12px; background: #121213; color: #fff; border: 1px solid #333; border-radius: 10px; margin-bottom: 20px; }
+    .cita-item { background: #242425; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid #D4AF37; }
+    .btn-atender { width: 100%; padding: 12px; background: #D4AF37; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .tag { float: right; padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; }
+    .ok { background: #28a745; } .done { background: #007bff; } .bad { background: #dc3545; }
   </style>
 </head>
-
 <body>
   <div class="box">
-    <div class="topbar">
-      <h1>Mi Panel: {{ stats.nombre }} 💈</h1>
-      <div style="font-size: 12px; opacity: 0.6;">Barbería Pro v2.0</div>
-    </div>
-
+    <h1>Mi Panel: {{ stats.nombre }} 💈</h1>
+    
     <div class="stats">
-      <div class="card"><div class="t">Mis Citas Hoy</div><div class="v">{{ stats.cant_total }}</div></div>
+      <div class="card"><div class="t">Citas Hoy</div><div class="v">{{ stats.cant_total }}</div></div>
       <div class="card"><div class="t">Pendientes</div><div class="v">{{ stats.cant_activas }}</div></div>
       <div class="card"><div class="t">Atendidas</div><div class="v">{{ stats.cant_atendidas }}</div></div>
-      <div class="card"><div class="t">Mi Ganancia</div><div class="v money">₡{{ stats.total_atendido }}</div></div>
+      <div class="card"><div class="t">Ganancia (Hoy)</div><div class="v money">₡{{ stats.total_atendido }}</div></div>
     </div>
 
-    <div class="filters">
-      <select id="filtro_dia" onchange="window.location.href='?solo='+this.value">
-        <option value="hoy" {% if stats.solo == 'hoy' %}selected{% endif %}>Citas de Hoy</option>
-        <option value="manana" {% if stats.solo == 'manana' %}selected{% endif %}>Citas de Mañana</option>
-        <option value="todas" {% if stats.solo == 'todas' %}selected{% endif %}>Ver Todo el Historial</option>
-      </select>
-    </div>
+    <select onchange="window.location.href='?solo='+this.value">
+      <option value="hoy" {% if stats.solo == 'hoy' %}selected{% endif %}>Citas de Hoy</option>
+      <option value="manana" {% if stats.solo == 'manana' %}selected{% endif %}>Citas de Mañana</option>
+      <option value="todas" {% if stats.solo == 'todas' %}selected{% endif %}>Todo el Historial</option>
+    </select>
 
-    <h3 style="color: #D4AF37; border-bottom: 1px solid #333; padding-bottom: 10px;">Próximos Clientes</h3>
-    
-    <div class="citas-grid">
+    <div class="citas-lista">
       {% for c in citas %}
       <div class="cita-item">
         <span class="tag {% if c.servicio == 'CITA ATENDIDA' %}done{% elif c.servicio == 'CITA CANCELADA' %}bad{% else %}ok{% endif %}">
           {{ c.servicio if c.servicio in ['CITA ATENDIDA', 'CITA CANCELADA'] else 'PENDIENTE' }}
         </span>
-        <div class="cli-name">{{ c.cliente }}</div>
-        <div style="color: #eee; font-size: 14px; margin-top: 3px;">{{ c.servicio }}</div>
-        
-        <div class="cli-meta">
-          <span>📅 {{ c.fecha }}</span> | <span>🕒 {{ c.hora }}</span> | <span>💰 ₡{{ c.precio }}</span>
-        </div>
+        <div style="font-weight: bold; font-size: 18px; color: #D4AF37;">{{ c.cliente }}</div>
+        <div style="font-size: 14px; margin: 5px 0;">{{ c.servicio }}</div>
+        <div style="opacity: 0.6; font-size: 12px;">📅 {{ c.fecha }} | 🕒 {{ c.hora }} | 💰 ₡{{ c.precio }}</div>
 
         {% if c.servicio not in ['CITA ATENDIDA', 'CITA CANCELADA'] %}
-        <form method="POST" action="/atendida" style="margin-top: 15px;">
+        <form method="POST" action="/atendida">
           <input type="hidden" name="id" value="{{ c.id }}">
-          <button type="submit" class="btn-accion">MARCAR COMO ATENDIDO</button>
+          <button type="submit" class="btn-atender">MARCAR ATENDIDO</button>
         </form>
         {% endif %}
       </div>
       {% else %}
-      <p style="text-align: center; opacity: 0.5; grid-column: 1/-1;">No tienes citas registradas para este periodo.</p>
+      <p style="text-align: center; opacity: 0.5;">No hay citas para mostrar.</p>
       {% endfor %}
     </div>
   </div>
-
-  <script>
-    // Auto-refresh cada 30 segundos para ver citas nuevas al instante
-    setInterval(() => { location.reload(); }, 30000);
-  </script>
 </body>
 </html>
