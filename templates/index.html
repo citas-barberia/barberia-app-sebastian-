@@ -7,15 +7,19 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #0b0b0b; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 440px; background: #161616; padding: 25px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); border: 1px solid #222; margin-top: 10px; }
-        h1 { color: #d4af37; text-align: center; font-size: 26px; margin-bottom: 25px; text-transform: uppercase; }
+        .container { width: 100%; max-width: 480px; background: #161616; padding: 25px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); border: 1px solid #222; margin-top: 10px; }
+        h1, h2 { color: #d4af37; text-align: center; }
+        h1 { font-size: 26px; margin-bottom: 25px; text-transform: uppercase; }
+        h2 { font-size: 20px; margin-top: 30px; }
         .form-group { margin-bottom: 18px; }
         label { display: block; margin-bottom: 8px; font-size: 14px; color: #d4af37; font-weight: bold; }
         input, select { width: 100%; padding: 16px; background: #222; border: 1px solid #333; border-radius: 14px; color: #fff; font-size: 16px; outline: none; transition: 0.3s; }
         input:focus, select:focus { border-color: #d4af37; }
         button.btn-principal { width: 100%; padding: 18px; background: #d4af37; color: #000; border: none; border-radius: 14px; font-size: 18px; font-weight: 800; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
+        button.btn-cancelar { width: 100%; padding: 16px; background: #8b1e1e; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 800; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
         .flash { background: #d4af37; color: #000; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; font-weight: bold; }
         .mini-texto { color: #bbb; font-size: 13px; margin-top: 6px; }
+        .separador { border-top: 1px solid #2a2a2a; margin: 28px 0; }
     </style>
 </head>
 <body>
@@ -75,6 +79,40 @@
         </div>
 
         <button type="submit" class="btn-principal">CONFIRMAR ESPACIO</button>
+    </form>
+
+    <div class="separador"></div>
+
+    <h2>Cancelar cita</h2>
+
+    <form action="/cancelar_cliente" method="POST">
+        <div class="form-group">
+            <label>Tu Nombre:</label>
+            <input type="text" name="cliente" placeholder="Escribe tu nombre exacto" required>
+        </div>
+
+        <div class="form-group">
+            <label>Barbero:</label>
+            <select name="barbero_id" required>
+                <option value="" disabled selected>Selecciona barbero</option>
+                {% for id, info in barberos.items() %}
+                <option value="{{ id }}">{{ info.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Fecha de la cita:</label>
+            <input type="date" name="fecha" value="{{ hoy_iso }}" min="{{ hoy_iso }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Hora de la cita:</label>
+            <input type="text" name="hora" placeholder="Ejemplo: 08:00am" required>
+            <div class="mini-texto">Escribe la hora igual a como la reservaste. Ejemplo: 08:00am</div>
+        </div>
+
+        <button type="submit" class="btn-cancelar">CANCELAR CITA</button>
     </form>
 </div>
 

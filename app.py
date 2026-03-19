@@ -9,8 +9,8 @@ TZ = ZoneInfo("America/Costa_Rica")
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "secret_key_123")
 
-SUPABASE_URL = "https://hvvoijhagmacmljigfzw.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2dm9pamhhZ21hY21samlnZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTI5NDQsImV4cCI6MjA4OTM2ODk0NH0.NePskMsd11PlyZItxjPwQvwVy4n9OoWeMpp9qMXGvuk"
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 BARBEROS = {
     "1": {"nombre": "Sebastian", "telefono": "50660840460"},
@@ -24,6 +24,21 @@ SERVICIOS = {
     "Cejas": {"precio": 2000, "duracion": 15},
 }
 
+MESES_2026 = {
+    "01": "Enero",
+    "02": "Febrero",
+    "03": "Marzo",
+    "04": "Abril",
+    "05": "Mayo",
+    "06": "Junio",
+    "07": "Julio",
+    "08": "Agosto",
+    "09": "Septiembre",
+    "10": "Octubre",
+    "11": "Noviembre",
+    "12": "Diciembre",
+}
+
 def _headers():
     return {
         "apikey": SUPABASE_KEY,
@@ -33,6 +48,15 @@ def _headers():
 
 def obtener_citas_barbero_fecha(barbero_id, fecha):
     url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&fecha=eq.{fecha}&order=hora.asc"
+    res = requests.get(url, headers=_headers())
+    try:
+        data = res.json()
+        return data if isinstance(data, list) else []
+    except:
+        return []
+
+def obtener_todas_citas_barbero(barbero_id):
+    url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&order=fecha.asc,hora.asc"
     res = requests.get(url, headers=_headers())
     try:
         data = res.json()
@@ -54,6 +78,12 @@ def hora_choque(hora_nueva, duracion_nueva, hora_existente, duracion_existente):
     fin_existente = inicio_existente + timedelta(minutes=duracion_existente)
 
     return inicio_nueva < fin_existente and fin_nueva > inicio_existente
+
+def formatear_hora(hora_db):
+    try:
+        return datetime.strptime(str(hora_db), "%H:%M:%S").strftime("%I:%M %p")
+    except:
+        return str(hora_db)
 
 @app.route("/")
 def index():
@@ -128,7 +158,8 @@ def agendar():
         r = requests.post(f"{SUPABASE_URL}/rest/v1/citas", headers=_headers(), json=data)
 
         if r.status_code not in [200, 201]:
-            print("Error Supabase:", r.status_code, r.text)
+            print("STATUS SUPABASE:", r.status_code)
+            print("RESPUESTA SUPABASE:", r.text)
             flash("No se pudo guardar la cita.")
             return redirect(url_for("index"))
 
@@ -190,7 +221,6 @@ def horas():
                 break
 
         if libre:
-            # Si la fecha elegida es hoy en Costa Rica, ocultar horas que ya pasaron
             if fecha == fecha_hoy_cr:
                 hora_slot_hoy = ahora_cr.replace(
                     hour=actual.hour,
@@ -207,42 +237,89 @@ def horas():
 
     return jsonify(disponibles)
 
+@app.route("/cancelar_cliente", methods=["POST"])
+def cancelar_cliente():
+    try:
+        cliente = request.form.get("cliente", "").strip()
+        barbero_id = request.form.get("barbero_id", "").strip()
+        fecha = request.form.get("fecha", "").strip()
+        hora = request.form.get("hora", "").strip()
+
+        if not cliente or not barbero_id or not fecha or not hora:
+            flash("Completa todos los datos para cancelar.")
+            return redirect(url_for("index"))
+
+        hora_db = datetime.strptime(hora.upper(), "%I:%M%p").strftime("%H:%M:%S")
+
+        buscar_url = (
+            f"{SUPABASE_URL}/rest/v1/citas"
+            f"?cliente_nombre=eq.{cliente}"
+            f"&barbero_id=eq.{barbero_id}"
+            f"&fecha=eq.{fecha}"
+            f"&hora=eq.{hora_db}"
+        )
+
+        res = requests.get(buscar_url, headers=_headers())
+        data = res.json() if res.ok else []
+
+        if not data:
+            flash("No se encontró una cita con esos datos.")
+            return redirect(url_for("index"))
+
+        cita_id = data[0]["id"]
+
+        patch = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}",
+            headers=_headers(),
+            json={"estado": "cancelada"}
+        )
+
+        if patch.status_code not in [200, 204]:
+            flash("No se pudo cancelar la cita.")
+            return redirect(url_for("index"))
+
+        flash("Cita cancelada correctamente.")
+    except Exception as e:
+        print("Error cancelando cliente:", e)
+        flash("Ocurrió un error al cancelar la cita.")
+
+    return redirect(url_for("index"))
+
 @app.route("/panel/<id_barbero>")
 def panel_barbero(id_barbero):
     if id_barbero not in BARBEROS:
         flash("Barbero no encontrado.")
         return redirect(url_for("index"))
 
-    url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{id_barbero}&order=fecha.asc,hora.asc"
-    res = requests.get(url, headers=_headers())
-
-    try:
-        citas = res.json()
-        citas = citas if isinstance(citas, list) else []
-    except:
-        citas = []
+    citas = obtener_todas_citas_barbero(id_barbero)
 
     for cita in citas:
-        try:
-            cita["hora_formateada"] = datetime.strptime(str(cita["hora"]), "%H:%M:%S").strftime("%I:%M %p")
-        except:
-            cita["hora_formateada"] = str(cita.get("hora", ""))
-
+        cita["hora_formateada"] = formatear_hora(cita.get("hora"))
         cita["precio"] = calcular_precio(cita.get("servicio", ""))
 
     hoy = datetime.now(TZ).strftime("%Y-%m-%d")
     manana = (datetime.now(TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
     modo = request.args.get("solo", "hoy")
+    mes = request.args.get("mes", datetime.now(TZ).strftime("%m"))
 
     if modo == "hoy":
-        filtradas = [c for c in citas if str(c.get("fecha")) == hoy]
+        filtradas = [c for c in citas if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() != "cancelada"]
     elif modo == "manana":
-        filtradas = [c for c in citas if str(c.get("fecha")) == manana]
+        filtradas = [c for c in citas if str(c.get("fecha")) == manana and str(c.get("estado", "")).lower() != "cancelada"]
+    elif modo == "canceladas_hoy":
+        filtradas = [c for c in citas if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() == "cancelada"]
+    elif modo == "historial_2026":
+        filtradas = [
+            c for c in citas
+            if str(c.get("fecha", "")).startswith(f"2026-{mes}-")
+        ]
     else:
-        filtradas = citas
+        filtradas = [c for c in citas if str(c.get("estado", "")).lower() != "cancelada"]
 
-    hoy_citas = [c for c in citas if str(c.get("fecha")) == hoy]
+    hoy_citas = [c for c in citas if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() != "cancelada"]
     hoy_atendidas = [c for c in hoy_citas if str(c.get("estado", "")).lower() == "atendida"]
+    hoy_canceladas = [c for c in citas if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() == "cancelada"]
+
     ganancia = sum(calcular_precio(c.get("servicio", "")) for c in hoy_atendidas)
 
     stats = {
@@ -250,10 +327,17 @@ def panel_barbero(id_barbero):
         "nombre": BARBEROS[id_barbero]["nombre"],
         "total": len(hoy_citas),
         "ganancia": ganancia,
-        "modo": modo
+        "canceladas_hoy": len(hoy_canceladas),
+        "modo": modo,
+        "mes": mes
     }
 
-    return render_template("barbero.html", citas=filtradas, stats=stats)
+    return render_template(
+        "barbero.html",
+        citas=filtradas,
+        stats=stats,
+        meses_2026=MESES_2026
+    )
 
 @app.route("/atendida", methods=["POST"])
 def atendida():
@@ -273,6 +357,24 @@ def atendida():
     flash("Cita marcada como atendida.")
     return redirect(url_for("panel_barbero", id_barbero=barbero_id))
 
+@app.route("/cancelar_barbero", methods=["POST"])
+def cancelar_barbero():
+    cita_id = request.form.get("id")
+    barbero_id = request.form.get("barbero_id")
+
+    if not cita_id:
+        flash("No se encontró la cita.")
+        return redirect(url_for("index"))
+
+    requests.patch(
+        f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}",
+        headers=_headers(),
+        json={"estado": "cancelada"}
+    )
+
+    flash("Cita cancelada correctamente.")
+    return redirect(url_for("panel_barbero", id_barbero=barbero_id))
+
 @app.route("/dueno")
 def panel_dueno():
     url = f"{SUPABASE_URL}/rest/v1/citas?order=fecha.asc,hora.asc"
@@ -288,15 +390,10 @@ def panel_dueno():
         barbero_id = str(cita.get("barbero_id", ""))
         cita["barbero_nombre"] = BARBEROS.get(barbero_id, {}).get("nombre", "Sin asignar")
         cita["precio"] = calcular_precio(cita.get("servicio", ""))
-
-        try:
-            cita["hora_formateada"] = datetime.strptime(str(cita["hora"]), "%H:%M:%S").strftime("%I:%M %p")
-        except:
-            cita["hora_formateada"] = str(cita.get("hora", ""))
+        cita["hora_formateada"] = formatear_hora(cita.get("hora"))
 
     return render_template("citas.html", citas=citas)
 
 if __name__ == "__main__":
     app.run(debug=True)
-
 

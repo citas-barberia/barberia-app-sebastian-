@@ -13,7 +13,7 @@
             margin: 0;
         }
         .box {
-            max-width: 700px;
+            max-width: 850px;
             margin: auto;
             background: #1b1b1c;
             padding: 20px;
@@ -25,17 +25,16 @@
             margin-bottom: 20px;
         }
         .stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
+            margin: 20px 0;
             text-align: center;
         }
         .stat-card {
             background: #242425;
             padding: 15px;
             border-radius: 14px;
-            flex: 1;
         }
         .val {
             display: block;
@@ -45,12 +44,12 @@
             margin-top: 8px;
         }
         .filtros {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
             gap: 10px;
             margin-bottom: 20px;
         }
         .filtros a {
-            flex: 1;
             text-align: center;
             text-decoration: none;
             padding: 12px;
@@ -58,10 +57,35 @@
             background: #2b2b2d;
             color: #fff;
             font-weight: bold;
+            font-size: 13px;
         }
         .filtros a.activo {
             background: #d4af37;
             color: #000;
+        }
+        .meses {
+            margin-bottom: 20px;
+        }
+        .meses form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .meses select, .meses button {
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+        }
+        .meses select {
+            background: #2b2b2d;
+            color: #fff;
+        }
+        .meses button {
+            background: #d4af37;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
         }
         .cita {
             background: #242425;
@@ -98,15 +122,29 @@
             background: #7f1d1d;
             color: #fff;
         }
-        button {
+        .acciones {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .acciones form {
+            flex: 1;
+        }
+        .btn-atender, .btn-cancelar {
             width: 100%;
             padding: 10px;
-            background: #d4af37;
             border: none;
             border-radius: 8px;
             font-weight: bold;
-            margin-top: 12px;
             cursor: pointer;
+        }
+        .btn-atender {
+            background: #d4af37;
+            color: #000;
+        }
+        .btn-cancelar {
+            background: #8b1e1e;
+            color: #fff;
         }
         .vacio {
             text-align: center;
@@ -130,13 +168,33 @@
                 Ganancia hoy
                 <span class="val">₡{{ stats.ganancia }}</span>
             </div>
+            <div class="stat-card">
+                Canceladas hoy
+                <span class="val">{{ stats.canceladas_hoy }}</span>
+            </div>
         </div>
 
         <div class="filtros">
             <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='hoy') }}" class="{% if stats.modo == 'hoy' %}activo{% endif %}">Hoy</a>
             <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='manana') }}" class="{% if stats.modo == 'manana' %}activo{% endif %}">Mañana</a>
             <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='todas') }}" class="{% if stats.modo == 'todas' %}activo{% endif %}">Todas</a>
+            <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='canceladas_hoy') }}" class="{% if stats.modo == 'canceladas_hoy' %}activo{% endif %}">Canceladas hoy</a>
+            <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='historial_2026', mes=stats.mes) }}" class="{% if stats.modo == 'historial_2026' %}activo{% endif %}">Historial 2026</a>
         </div>
+
+        {% if stats.modo == 'historial_2026' %}
+        <div class="meses">
+            <form method="GET" action="{{ url_for('panel_barbero', id_barbero=stats.id) }}">
+                <input type="hidden" name="solo" value="historial_2026">
+                <select name="mes">
+                    {% for numero, nombre in meses_2026.items() %}
+                    <option value="{{ numero }}" {% if stats.mes == numero %}selected{% endif %}>{{ nombre }} 2026</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Ver mes</button>
+            </form>
+        </div>
+        {% endif %}
 
         {% if citas %}
             {% for cita in citas %}
@@ -153,12 +211,20 @@
                         {{ estado }}
                     </span>
 
-                    {% if estado != 'atendida' %}
-                    <form action="{{ url_for('atendida') }}" method="POST">
-                        <input type="hidden" name="id" value="{{ cita.id }}">
-                        <input type="hidden" name="barbero_id" value="{{ stats.id }}">
-                        <button type="submit">Marcar como atendida</button>
-                    </form>
+                    {% if estado != 'atendida' and estado != 'cancelada' %}
+                    <div class="acciones">
+                        <form action="{{ url_for('atendida') }}" method="POST">
+                            <input type="hidden" name="id" value="{{ cita.id }}">
+                            <input type="hidden" name="barbero_id" value="{{ stats.id }}">
+                            <button type="submit" class="btn-atender">Marcar atendida</button>
+                        </form>
+
+                        <form action="{{ url_for('cancelar_barbero') }}" method="POST">
+                            <input type="hidden" name="id" value="{{ cita.id }}">
+                            <input type="hidden" name="barbero_id" value="{{ stats.id }}">
+                            <button type="submit" class="btn-cancelar">Cancelar cita</button>
+                        </form>
+                    </div>
                     {% endif %}
                 </div>
             {% endfor %}
