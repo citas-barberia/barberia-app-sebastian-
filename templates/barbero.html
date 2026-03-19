@@ -1,72 +1,172 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Panel: {{ stats.nombre }}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; background: #0f0f10; color: #f5f5f5; font-family: 'Segoe UI', sans-serif; }
-    .box { width: calc(100% - 20px); max-width: 1200px; margin: 10px auto; padding: 20px; background: #1b1b1c; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    h1 { color: #D4AF37; margin: 0; font-size: 28px; text-align: center; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 20px 0; }
-    .card { background: #242425; border: 1px solid #333; border-radius: 15px; padding: 15px; text-align: center; }
-    .t { opacity: .7; font-size: 11px; text-transform: uppercase; color: #D4AF37; }
-    .v { font-size: 22px; font-weight: bold; margin-top: 5px; }
-    .money { color: #28a745; }
-    select { width: 100%; padding: 15px; background: #121213; color: #fff; border: 1px solid #d4af37; border-radius: 12px; margin-bottom: 20px; font-size: 16px; outline: none; cursor: pointer; }
-    .cita-item { background: #242425; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 4px solid #D4AF37; position: relative; }
-    .btn-atender { width: 100%; padding: 12px; background: #D4AF37; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; }
-    .tag { float: right; padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; }
-    .ok { background: #28a745; } .done { background: #007bff; } .bad { background: #dc3545; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Barbero</title>
+    <style>
+        body {
+            background: #0f0f10;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            margin: 0;
+        }
+        .box {
+            max-width: 700px;
+            margin: auto;
+            background: #1b1b1c;
+            padding: 20px;
+            border-radius: 20px;
+        }
+        h1 {
+            color: #d4af37;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            gap: 10px;
+            text-align: center;
+        }
+        .stat-card {
+            background: #242425;
+            padding: 15px;
+            border-radius: 14px;
+            flex: 1;
+        }
+        .val {
+            display: block;
+            font-size: 22px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-top: 8px;
+        }
+        .filtros {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .filtros a {
+            flex: 1;
+            text-align: center;
+            text-decoration: none;
+            padding: 12px;
+            border-radius: 12px;
+            background: #2b2b2d;
+            color: #fff;
+            font-weight: bold;
+        }
+        .filtros a.activo {
+            background: #d4af37;
+            color: #000;
+        }
+        .cita {
+            background: #242425;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #d4af37;
+        }
+        .cita h3 {
+            margin: 0 0 8px 0;
+            color: #d4af37;
+        }
+        .cita p {
+            margin: 6px 0;
+            font-size: 14px;
+        }
+        .estado {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+        .pendiente {
+            background: #664d03;
+            color: #fff;
+        }
+        .atendida {
+            background: #14532d;
+            color: #fff;
+        }
+        .cancelada {
+            background: #7f1d1d;
+            color: #fff;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #d4af37;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+        .vacio {
+            text-align: center;
+            background: #242425;
+            padding: 20px;
+            border-radius: 12px;
+            color: #bbb;
+        }
+    </style>
 </head>
 <body>
-  <div class="box">
-    <h1>Mi Panel: {{ stats.nombre }} 💈</h1>
-    
-    <div class="stats">
-      <div class="card"><div class="t">Citas Hoy</div><div class="v">{{ stats.cant_total }}</div></div>
-      <div class="card"><div class="t">Pendientes</div><div class="v">{{ stats.cant_activas }}</div></div>
-      <div class="card"><div class="t">Atendidas</div><div class="v">{{ stats.cant_atendidas }}</div></div>
-      <div class="card"><div class="t">Ganancia (Hoy)</div><div class="v money">₡{{ stats.total_atendido }}</div></div>
-    </div>
+    <div class="box">
+        <h1>Panel: {{ stats.nombre }}</h1>
 
-    <select id="selector_periodo" onchange="cambiarVista()">
-      <option value="hoy" {% if stats.solo == 'hoy' %}selected{% endif %}>Citas de Hoy</option>
-      <option value="manana" {% if stats.solo == 'manana' %}selected{% endif %}>Citas de Mañana</option>
-      <option value="todas" {% if stats.solo == 'todas' %}selected{% endif %}>Todo el Historial</option>
-    </select>
+        <div class="stats">
+            <div class="stat-card">
+                Citas hoy
+                <span class="val">{{ stats.total }}</span>
+            </div>
+            <div class="stat-card">
+                Ganancia hoy
+                <span class="val">₡{{ stats.ganancia }}</span>
+            </div>
+        </div>
 
-    <div class="citas-lista">
-      {% for c in citas %}
-      <div class="cita-item">
-        <span class="tag {% if c.servicio == 'CITA ATENDIDA' %}done{% elif c.servicio == 'CITA CANCELADA' %}bad{% else %}ok{% endif %}">
-          {{ c.servicio if c.servicio in ['CITA ATENDIDA', 'CITA CANCELADA'] else 'PENDIENTE' }}
-        </span>
-        <div style="font-weight: bold; font-size: 18px; color: #D4AF37;">{{ c.cliente }}</div>
-        <div style="font-size: 14px; margin: 5px 0;">{{ c.servicio }}</div>
-        <div style="opacity: 0.6; font-size: 12px;">📅 {{ c.fecha }} | 🕒 {{ c.hora }} | 💰 ₡{{ c.precio }}</div>
+        <div class="filtros">
+            <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='hoy') }}" class="{% if stats.modo == 'hoy' %}activo{% endif %}">Hoy</a>
+            <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='manana') }}" class="{% if stats.modo == 'manana' %}activo{% endif %}">Mañana</a>
+            <a href="{{ url_for('panel_barbero', id_barbero=stats.id, solo='todas') }}" class="{% if stats.modo == 'todas' %}activo{% endif %}">Todas</a>
+        </div>
 
-        {% if c.servicio not in ['CITA ATENDIDA', 'CITA CANCELADA'] %}
-        <form method="POST" action="/atendida">
-          <input type="hidden" name="id" value="{{ c.id }}">
-          <button type="submit" class="btn-atender">MARCAR ATENDIDO</button>
-        </form>
+        {% if citas %}
+            {% for cita in citas %}
+                <div class="cita">
+                    <h3>{{ cita.cliente_nombre }}</h3>
+                    <p><strong>Servicio:</strong> {{ cita.servicio }}</p>
+                    <p><strong>Fecha:</strong> {{ cita.fecha }}</p>
+                    <p><strong>Hora:</strong> {{ cita.hora_formateada }}</p>
+                    <p><strong>Precio:</strong> ₡{{ cita.precio }}</p>
+
+                    {% set estado = cita.estado|default('pendiente') %}
+
+                    <span class="estado {% if estado == 'atendida' %}atendida{% elif estado == 'cancelada' %}cancelada{% else %}pendiente{% endif %}">
+                        {{ estado }}
+                    </span>
+
+                    {% if estado != 'atendida' %}
+                    <form action="{{ url_for('atendida') }}" method="POST">
+                        <input type="hidden" name="id" value="{{ cita.id }}">
+                        <input type="hidden" name="barbero_id" value="{{ stats.id }}">
+                        <button type="submit">Marcar como atendida</button>
+                    </form>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="vacio">
+                No hay citas en este filtro.
+            </div>
         {% endif %}
-      </div>
-      {% else %}
-      <p style="text-align: center; opacity: 0.5; padding: 20px;">No hay citas para mostrar en este periodo.</p>
-      {% endfor %}
     </div>
-  </div>
-
-  <script>
-    function cambiarVista() {
-      const valor = document.getElementById('selector_periodo').value;
-      // Esto recarga la página enviando la instrucción correcta al servidor
-      window.location.href = window.location.pathname + '?solo=' + valor;
-    }
-  </script>
 </body>
 </html>

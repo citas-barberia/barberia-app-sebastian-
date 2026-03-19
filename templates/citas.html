@@ -1,7 +1,78 @@
-<<<<<<< HEAD
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel del Dueño</title>
+    <style>
+        body {
+            background: #0f0f10;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 15px;
+            margin: 0;
+        }
+        .box {
+            max-width: 950px;
+            margin: auto;
+            background: #1b1b1c;
+            padding: 20px;
+            border-radius: 20px;
+        }
+        h1 {
+            color: #d4af37;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #242425;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #333;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background: #2d2d30;
+            color: #d4af37;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Panel General del Dueño</h1>
 
-
-=======
-
-
->>>>>>> fc95a033753445eab450cfaba2e193b67f69b9d5
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Barbero</th>
+                    <th>Servicio</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cita in citas %}
+                <tr>
+                    <td>{{ cita.cliente_nombre }}</td>
+                    <td>{{ cita.barbero_nombre }}</td>
+                    <td>{{ cita.servicio }}</td>
+                    <td>{{ cita.fecha }}</td>
+                    <td>{{ cita.hora_formateada }}</td>
+                    <td>₡{{ cita.precio }}</td>
+                    <td>{{ cita.estado|default('pendiente') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

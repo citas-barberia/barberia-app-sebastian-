@@ -23,7 +23,11 @@
     <h1>AGENDAR CITA 💈</h1>
 
     {% with messages = get_flashed_messages() %}
-      {% if messages %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endif %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
     {% endwith %}
 
     <form action="/" method="POST">
@@ -77,26 +81,31 @@ async function actualizarHoras() {
     const fecha = document.getElementById('fecha').value;
     const select = document.getElementById('hora_select');
 
-    if (!b_id || !serv || !fecha) return;
+    if (!b_id || !serv || !fecha) {
+        select.innerHTML = '<option value="">Primero elige barbero y servicio...</option>';
+        return;
+    }
 
     select.innerHTML = '<option value="">Buscando horas...</option>';
 
     try {
-        // Esta URL debe coincidir con la de app.py
-        const res = await fetch(`/horas?barbero_id=${b_id}&servicio=${serv}&fecha=${fecha}&t=${Date.now()}`);
+        const res = await fetch(`/horas?barbero_id=${encodeURIComponent(b_id)}&servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(fecha)}&t=${Date.now()}`);
         const horas = await res.json();
 
         select.innerHTML = '';
-        if (horas.length === 0) {
+
+        if (!horas.length) {
             select.innerHTML = '<option value="">No hay disponibilidad</option>';
-        } else {
-            select.innerHTML = '<option value="" disabled selected>Selecciona la hora</option>';
-            horas.forEach(h => {
-                const opt = document.createElement('option');
-                opt.value = h; opt.textContent = h;
-                select.appendChild(opt);
-            });
+            return;
         }
+
+        select.innerHTML = '<option value="" disabled selected>Selecciona la hora</option>';
+        horas.forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h;
+            opt.textContent = h;
+            select.appendChild(opt);
+        });
     } catch (e) {
         select.innerHTML = '<option value="">Error al cargar horas</option>';
     }
