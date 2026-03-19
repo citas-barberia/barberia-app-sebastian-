@@ -8,12 +8,16 @@ import requests
 TZ = ZoneInfo("America/Costa_Rica")
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "secret_key_123")
-
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "barberia123")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+# WhatsApp Cloud API
+WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+
 BARBEROS = {
-    "1": {"nombre": "Sebastian", "telefono": "50660840460"},
+    "1": {"nombre": "Sebastian", "telefono": "50672314147"},
     "2": {"nombre": "Barbero 2", "telefono": "50600000000"},
     "3": {"nombre": "Barbero 3", "telefono": "50600000000"}
 }
@@ -39,12 +43,50 @@ MESES_2026 = {
     "12": "Diciembre",
 }
 
+
 def _headers():
     return {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json"
     }
+
+
+def normalizar_numero_cr(numero):
+    numero = str(numero).strip().replace(" ", "").replace("-", "").replace("+", "")
+    if numero.startswith("506"):
+        return numero
+    return f"506{numero}"
+
+
+def enviar_whatsapp_texto(numero, mensaje):
+    try:
+        if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+            print("WhatsApp no configurado en variables de entorno.")
+            return None
+
+        numero = normalizar_numero_cr(numero)
+
+        url = f"https://graph.facebook.com/v23.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": numero,
+            "type": "text",
+            "text": {"body": mensaje}
+        }
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
+        print("WHATSAPP STATUS:", r.status_code)
+        print("WHATSAPP RESPUESTA:", r.text)
+        return r
+    except Exception as e:
+        print("Error enviando WhatsApp:", e)
+        return None
+
 
 def obtener_citas_barbero_fecha(barbero_id, fecha):
     url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&fecha=eq.{fecha}&order=hora.asc"
@@ -55,6 +97,7 @@ def obtener_citas_barbero_fecha(barbero_id, fecha):
     except:
         return []
 
+
 def obtener_todas_citas_barbero(barbero_id):
     url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&order=fecha.asc,hora.asc"
     res = requests.get(url, headers=_headers())
@@ -64,11 +107,26 @@ def obtener_todas_citas_barbero(barbero_id):
     except:
         return []
 
+
+def obtener_cita_por_id(cita_id):
+    url = f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}"
+    res = requests.get(url, headers=_headers())
+    try:
+        data = res.json()
+        if isinstance(data, list) and data:
+            return data[0]
+    except:
+        pass
+    return None
+
+
 def calcular_precio(servicio):
     return SERVICIOS.get(servicio, {}).get("precio", 0)
 
+
 def calcular_duracion(servicio):
     return SERVICIOS.get(servicio, {}).get("duracion", 30)
+
 
 def hora_choque(hora_nueva, duracion_nueva, hora_existente, duracion_existente):
     inicio_nueva = datetime.strptime(hora_nueva.upper(), "%I:%M%p")
@@ -79,11 +137,13 @@ def hora_choque(hora_nueva, duracion_nueva, hora_existente, duracion_existente):
 
     return inicio_nueva < fin_existente and fin_nueva > inicio_existente
 
+
 def formatear_hora(hora_db):
     try:
         return datetime.strptime(str(hora_db), "%H:%M:%S").strftime("%I:%M %p")
     except:
         return str(hora_db)
+
 
 @app.route("/")
 def index():
@@ -102,16 +162,18 @@ def index():
     resp.set_cookie("cliente_id", c_id, max_age=31536000)
     return resp
 
+
 @app.route("/", methods=["POST"])
 def agendar():
     try:
         cliente = request.form.get("cliente", "").strip()
+        cliente_telefono = request.form.get("cliente_telefono", "").strip()
         barbero_id = request.form.get("barbero_id", "").strip()
         servicio = request.form.get("servicio", "").strip()
         fecha = request.form.get("fecha", "").strip()
         hora = request.form.get("hora", "").strip()
 
-        if not cliente or not barbero_id or not servicio or not fecha or not hora:
+        if not cliente or not cliente_telefono or not barbero_id or not servicio or not fecha or not hora:
             flash("Faltan datos para agendar la cita.")
             return redirect(url_for("index"))
 
@@ -148,6 +210,7 @@ def agendar():
 
         data = {
             "cliente_nombre": cliente,
+            "cliente_telefono": normalizar_numero_cr(cliente_telefono),
             "servicio": servicio,
             "fecha": fecha,
             "hora": hora_db,
@@ -163,12 +226,37 @@ def agendar():
             flash("No se pudo guardar la cita.")
             return redirect(url_for("index"))
 
+        nombre_barbero = BARBEROS[barbero_id]["nombre"]
+        telefono_barbero = BARBEROS[barbero_id]["telefono"]
+
+        mensaje_barbero = (
+            f"💈 Nueva cita agendada\n"
+            f"Cliente: {cliente}\n"
+            f"Teléfono: {normalizar_numero_cr(cliente_telefono)}\n"
+            f"Servicio: {servicio}\n"
+            f"Fecha: {fecha}\n"
+            f"Hora: {hora}"
+        )
+
+        mensaje_cliente = (
+            f"✅ Tu cita fue confirmada\n"
+            f"Barbero: {nombre_barbero}\n"
+            f"Servicio: {servicio}\n"
+            f"Fecha: {fecha}\n"
+            f"Hora: {hora}\n"
+            f"Te esperamos en la barbería."
+        )
+
+        enviar_whatsapp_texto(telefono_barbero, mensaje_barbero)
+        enviar_whatsapp_texto(cliente_telefono, mensaje_cliente)
+
         flash("¡Cita agendada correctamente!")
     except Exception as e:
         print(f"Error agendando: {e}")
         flash("Ocurrió un error al agendar.")
 
     return redirect(url_for("index"))
+
 
 @app.route("/horas")
 def horas():
@@ -237,6 +325,7 @@ def horas():
 
     return jsonify(disponibles)
 
+
 @app.route("/cancelar_cliente", methods=["POST"])
 def cancelar_cliente():
     try:
@@ -266,7 +355,8 @@ def cancelar_cliente():
             flash("No se encontró una cita con esos datos.")
             return redirect(url_for("index"))
 
-        cita_id = data[0]["id"]
+        cita = data[0]
+        cita_id = cita["id"]
 
         patch = requests.patch(
             f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}",
@@ -278,12 +368,36 @@ def cancelar_cliente():
             flash("No se pudo cancelar la cita.")
             return redirect(url_for("index"))
 
+        nombre_barbero = BARBEROS[barbero_id]["nombre"]
+        telefono_barbero = BARBEROS[barbero_id]["telefono"]
+        cliente_telefono = cita.get("cliente_telefono", "")
+
+        mensaje_barbero = (
+            f"❌ Cita cancelada\n"
+            f"Cliente: {cliente}\n"
+            f"Fecha: {fecha}\n"
+            f"Hora: {hora}\n"
+            f"Barbero: {nombre_barbero}"
+        )
+
+        mensaje_cliente = (
+            f"❌ Tu cita fue cancelada correctamente\n"
+            f"Barbero: {nombre_barbero}\n"
+            f"Fecha: {fecha}\n"
+            f"Hora: {hora}"
+        )
+
+        enviar_whatsapp_texto(telefono_barbero, mensaje_barbero)
+        if cliente_telefono:
+            enviar_whatsapp_texto(cliente_telefono, mensaje_cliente)
+
         flash("Cita cancelada correctamente.")
     except Exception as e:
         print("Error cancelando cliente:", e)
         flash("Ocurrió un error al cancelar la cita.")
 
     return redirect(url_for("index"))
+
 
 @app.route("/panel/<id_barbero>")
 def panel_barbero(id_barbero):
@@ -337,6 +451,7 @@ def panel_barbero(id_barbero):
         meses_2026=MESES_2026
     )
 
+
 @app.route("/atendida", methods=["POST"])
 def atendida():
     cita_id = request.form.get("id")
@@ -355,6 +470,7 @@ def atendida():
     flash("Cita marcada como atendida.")
     return redirect(url_for("panel_barbero", id_barbero=barbero_id))
 
+
 @app.route("/cancelar_barbero", methods=["POST"])
 def cancelar_barbero():
     cita_id = request.form.get("id")
@@ -364,14 +480,35 @@ def cancelar_barbero():
         flash("No se encontró la cita.")
         return redirect(url_for("index"))
 
+    cita = obtener_cita_por_id(cita_id)
+
     requests.patch(
         f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}",
         headers=_headers(),
         json={"estado": "cancelada"}
     )
 
+    if cita:
+        cliente_telefono = cita.get("cliente_telefono", "")
+        cliente_nombre = cita.get("cliente_nombre", "")
+        fecha = cita.get("fecha", "")
+        hora = formatear_hora(cita.get("hora", ""))
+        nombre_barbero = BARBEROS.get(barbero_id, {}).get("nombre", "Barbero")
+
+        mensaje_cliente = (
+            f"❌ Tu cita fue cancelada por la barbería\n"
+            f"Barbero: {nombre_barbero}\n"
+            f"Fecha: {fecha}\n"
+            f"Hora: {hora}\n"
+            f"Cliente: {cliente_nombre}"
+        )
+
+        if cliente_telefono:
+            enviar_whatsapp_texto(cliente_telefono, mensaje_cliente)
+
     flash("Cita cancelada correctamente.")
     return redirect(url_for("panel_barbero", id_barbero=barbero_id))
+
 
 @app.route("/dueno")
 def panel_dueno():
@@ -391,6 +528,24 @@ def panel_dueno():
         cita["hora_formateada"] = formatear_hora(cita.get("hora"))
 
     return render_template("citas.html", citas=citas)
+@app.route("/webhook", methods=["GET"])
+def verify_webhook():
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+
+    if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
+        return challenge, 200
+
+    return "Token inválido", 403
+
+
+@app.route("/webhook", methods=["POST"])
+def recibir_webhook():
+    data = request.get_json(silent=True)
+    print("WEBHOOK RECIBIDO:", data)
+    return "EVENT_RECEIVED", 200
+
 
 if __name__ == "__main__":
     app.run(debug=True)
