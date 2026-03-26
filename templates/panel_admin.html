@@ -4,234 +4,180 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Administrativo - Barbería</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            background: #0f0f10;
-            color: #fff;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 15px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: auto;
-        }
-        h1, h2 {
-            color: #d4af37;
-        }
-        .resumen {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .resumen-card, .panel-crear, .barbero-card {
-            background: #1b1b1c;
-            border-radius: 14px;
-            padding: 18px;
-            border: 1px solid #2a2a2a;
-        }
-        .valor {
-            font-size: 30px;
-            font-weight: bold;
-            color: #d4af37;
-            margin-top: 10px;
-        }
-        .filtros {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        .filtros button, .btn-accion, .btn-crear {
-            border: none;
-            border-radius: 10px;
-            padding: 12px 14px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .filtros button {
-            background: #2b2b2d;
-            color: #fff;
-        }
-        .filtros button.activo {
-            background: #d4af37;
-            color: #000;
-        }
-        .barberos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 18px;
-            margin-top: 25px;
-        }
-        .barbero-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-        .barbero-nombre {
-            font-size: 28px;
-            font-weight: bold;
-            color: #d4af37;
-        }
-        .barbero-estado {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .badge {
-            padding: 7px 12px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .badge-activo { background: #166534; }
-        .badge-inactivo { background: #991b1b; }
-        .badge-disponible { background: #1d4ed8; }
-        .badge-no-disponible { background: #6b7280; }
+<style>
+    body {
+        background: #0b0b0c;
+        color: #f5f5f5;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 24px;
+    }
 
-        .barbero-acciones {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .btn-disponibilidad {
-            background: #1d4ed8;
-            color: #fff;
-        }
-        .btn-estado {
-            background: #166534;
-            color: #fff;
-        }
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-        .barbero-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-        .stat-mini {
-            background: #242425;
-            border-radius: 10px;
-            padding: 12px;
-            text-align: center;
-        }
-        .stat-mini .valor {
-            font-size: 22px;
-            margin-top: 6px;
-        }
+    h1 {
+        margin: 0;
+        font-size: 42px;
+        color: #d4af37;
+        font-weight: 800;
+    }
 
-        .citas-list {
-            background: #242425;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .cita-item {
-            padding: 12px;
-            border-bottom: 1px solid #333;
-        }
-        .cita-item:last-child {
-            border-bottom: none;
-        }
-        .cita-hora {
-            color: #d4af37;
-            font-weight: bold;
-        }
-        .cita-origen {
-            display: inline-block;
-            margin-top: 6px;
-            padding: 3px 8px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        .online {
-            background: #1d4ed8;
-            color: #fff;
-        }
-        .manual {
-            background: #d97706;
-            color: #fff;
-        }
-        .cita-vacia {
-            padding: 18px;
-            text-align: center;
-            color: #aaa;
-        }
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
 
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .form-group label {
-            color: #d4af37;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            background: #242425;
-            color: #fff;
-            border: 1px solid #3a3a3b;
-            border-radius: 8px;
-            padding: 12px;
-        }
-        textarea {
-            width: 100%;
-            min-height: 90px;
-            resize: vertical;
-            margin-bottom: 12px;
-        }
-        .btn-crear {
-            width: 100%;
-            background: #d4af37;
-            color: #000;
-            font-size: 20px;
-        }
-        .mensaje {
-            margin-bottom: 15px;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        .exito {
-            background: #166534;
-        }
-        .error {
-            background: #991b1b;
-        }
-    </style>
+    .subtitulo {
+        color: #9ca3af;
+        margin-top: 8px;
+        font-size: 15px;
+    }
+
+    .filtros {
+        display: flex;
+        gap: 10px;
+    }
+
+    .filtros button {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font-weight: 700;
+        cursor: pointer;
+        background: #1e1f22;
+        color: #fff;
+    }
+
+    .filtros button.activo {
+        background: #d4af37;
+        color: #000;
+    }
+
+    .resumen {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .resumen-card,
+    .panel-crear,
+    .barbero-card {
+        background: #161719;
+        border: 1px solid #27272a;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    }
+
+    .resumen-card {
+        padding: 18px;
+    }
+
+    .resumen-card .label {
+        color: #9ca3af;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .resumen-card .valor {
+        font-size: 40px;
+        font-weight: 800;
+        color: #d4af37;
+        line-height: 1;
+    }
+
+    .panel-crear {
+        padding: 22px;
+        margin-bottom: 24px;
+    }
+
+    .panel-crear h2 {
+        margin-top: 0;
+        margin-bottom: 18px;
+        color: #d4af37;
+        font-size: 32px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+
+    .form-group label {
+        color: #d4af37;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea,
+    textarea {
+        background: #202124;
+        color: #fff;
+        border: 1px solid #34363b;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 15px;
+        outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus,
+    textarea:focus {
+        border-color: #d4af37;
+        box-shadow: 0 0 0 3px rgba(212,175,55,.15);
+    }
+
+    textarea {
+        min-height: 85px;
+        margin-bottom: 14px;
+    }
+
+    .btn-crear {
+        width: 100%;
+        background: #d4af37;
+        color: #111;
+        border: none;
+        border-radius: 14px;
+        padding: 16px;
+        font-size: 18px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .btn-crear:hover {
+        transform: translateY(-1px);
+    }
+</style>
 </head>
 <body>
 <div class="container">
-    <h1>Panel Administrativo - Barbería</h1>
-
-    <div id="mensaje-container"></div>
-
-    <div class="filtros">
-        <button type="button" class="activo" onclick="filtrarVista('todos', this)">Todos los Barberos</button>
-        <button type="button" onclick="filtrarVista('solo-activos', this)">Solo Activos</button>
+   <div class="topbar">
+    <div>
+        <h1>Panel Administrativo</h1>
+        <div class="subtitulo">Vista general de la barbería y citas de hoy</div>
     </div>
 
+    <div class="filtros">
+        <button type="button" class="activo" onclick="filtrarVista('todos', this)">Todos</button>
+        <button type="button" onclick="filtrarVista('solo-activos', this)">Solo activos</button>
+    </div>
+</div>
+
     <div class="resumen">
-        <div class="resumen-card">
-            <div>Citas Hoy</div>
-            <div class="valor" id="total-citas">0</div>
-        </div>
+        
         <div class="resumen-card">
             <div>Ganancia Hoy</div>
             <div class="valor">₡<span id="total-ganancia">0</span></div>
@@ -240,6 +186,10 @@
             <div>Barberos Activos</div>
             <div class="valor" id="barberos-activos">0</div>
         </div>
+        <div class="resumen-card">
+    <div class="label">Citas hoy</div>
+    <div class="valor" id="total-citas">0</div>
+</div>
         <div class="resumen-card">
             <div>Barberos Disponibles Hoy</div>
             <div class="valor" id="barberos-disponibles">0</div>
