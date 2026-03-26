@@ -621,7 +621,13 @@ function filtrarVista(vista, btn) {
     });
 }
 
-async function toggleDisponibilidad(barberoId) {
+async function toggleDisponibilidad(barberoId, btn) {
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'not-allowed';
+
     try {
         const res = await fetch(`/api/barbero/${barberoId}/toggle_disponibilidad`, {
             method: 'POST'
@@ -634,14 +640,24 @@ async function toggleDisponibilidad(barberoId) {
         }
 
         mostrarMensaje('Disponibilidad actualizada correctamente', 'exito');
-        setTimeout(() => location.reload(), 800);
+        location.reload();
     } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
         mostrarMensaje(e.message, 'error');
         console.error(e);
     }
 }
 
-async function toggleActivo(barberoId) {
+async function toggleActivo(barberoId, btn) {
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'not-allowed';
+
     try {
         const res = await fetch(`/api/barbero/${barberoId}/toggle_activo`, {
             method: 'POST'
@@ -654,14 +670,18 @@ async function toggleActivo(barberoId) {
         }
 
         mostrarMensaje('Estado actualizado correctamente', 'exito');
-        setTimeout(() => location.reload(), 800);
+        location.reload();
     } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
         mostrarMensaje(e.message, 'error');
         console.error(e);
     }
 }
 
-async function crearCitaManual() {
+async function crearCitaManual(btn) {
     const barbero_id = document.getElementById('barbero_manual').value;
     const fecha = document.getElementById('fecha_manual').value;
     const hora24 = document.getElementById('hora_manual').value;
@@ -673,6 +693,12 @@ async function crearCitaManual() {
         mostrarMensaje('Completa barbero, fecha y hora.', 'error');
         return;
     }
+
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'CREANDO CITA...';
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'not-allowed';
 
     const [hh, mm] = hora24.split(':');
     let h = parseInt(hh, 10);
@@ -701,8 +727,12 @@ async function crearCitaManual() {
         }
 
         mostrarMensaje('Cita manual creada correctamente', 'exito');
-        setTimeout(() => location.reload(), 1000);
+        location.reload();
     } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
         mostrarMensaje(e.message, 'error');
         console.error(e);
     }

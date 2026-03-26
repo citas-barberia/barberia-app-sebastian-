@@ -132,3 +132,7 @@ hr {
     background: #333;
     margin: 25px 0;
 }
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
