@@ -523,7 +523,7 @@
             </div>
         </div>
 
-        <button type="button" class="btn-crear" onclick="crearCitaManual()">CREAR CITA MANUAL</button>
+        <button type="button" class="btn-crear" onclick="crearCitaManual(this)">CREAR CITA MANUAL</button>
     </div>
 
     <div class="barberos-grid">
@@ -554,13 +554,13 @@
                 <div class="barbero-acciones">
                     <button type="button"
                             class="btn-accion btn-disponibilidad {% if not barbero.disponible_hoy %}off{% endif %}"
-                            onclick="toggleDisponibilidad('{{ barbero.id }}')">
+                            onclick="toggleDisponibilidad('{{ barbero.id }}',this)">
                         {% if barbero.disponible_hoy %}✓ DISPONIBLE{% else %}X NO DISPONIBLE{% endif %}
                     </button>
 
                     <button type="button"
                             class="btn-accion btn-estado {% if not barbero.activo %}off{% endif %}"
-                            onclick="toggleActivo('{{ barbero.id }}')">
+                            onclick="toggleActivo('{{ barbero.id }}',this)">
                         {% if barbero.activo %}✓ ACTIVO{% else %}X INACTIVO{% endif %}
                     </button>
                 </div>
