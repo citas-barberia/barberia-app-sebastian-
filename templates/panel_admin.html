@@ -553,10 +553,10 @@
 
                 <div class="barbero-acciones">
                     <button type="button"
-                            class="btn-accion btn-disponibilidad {% if not barbero.disponible_hoy %}off{% endif %}"
-                            onclick="toggleDisponibilidad('{{ barbero.id }}',this)">
-                        {% if barbero.disponible_hoy %}✓ DISPONIBLE{% else %}X NO DISPONIBLE{% endif %}
-                    </button>
+        class="btn-accion btn-disponibilidad {% if not barbero.disponible_hoy %}off{% endif %}"
+        onclick="toggleDisponibilidad('{{ barbero.id }}', this)">
+    {% if barbero.disponible_hoy %}✓ DISPONIBLE{% else %}X NO DISPONIBLE{% endif %}
+</button>
 
                     <button type="button"
                             class="btn-accion btn-estado {% if not barbero.activo %}off{% endif %}"
@@ -625,8 +625,6 @@ async function toggleDisponibilidad(barberoId, btn) {
     const textoOriginal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = 'Guardando...';
-    btn.style.opacity = '0.7';
-    btn.style.cursor = 'not-allowed';
 
     try {
         const res = await fetch(`/api/barbero/${barberoId}/toggle_disponibilidad`, {
@@ -639,18 +637,30 @@ async function toggleDisponibilidad(barberoId, btn) {
             throw new Error(data.error || 'No se pudo cambiar disponibilidad');
         }
 
+        const card = btn.closest('.barbero-card');
+        const disponibleAhora = data.disponible_hoy ? '1' : '0';
+
+        card.dataset.disponible = disponibleAhora;
+
+        const badgeDisponible = card.querySelector('.badge-disponible, .badge-no-disponible');
+        if (badgeDisponible) {
+            badgeDisponible.textContent = data.disponible_hoy ? 'DISPONIBLE' : 'NO DISPONIBLE';
+            badgeDisponible.className = `badge ${data.disponible_hoy ? 'badge-disponible' : 'badge-no-disponible'}`;
+        }
+
+        btn.innerHTML = data.disponible_hoy ? '✓ DISPONIBLE' : 'X NO DISPONIBLE';
+        btn.classList.toggle('off', !data.disponible_hoy);
+        btn.disabled = false;
+
+        actualizarResumen();
         mostrarMensaje('Disponibilidad actualizada correctamente', 'exito');
-        location.reload();
     } catch (e) {
         btn.disabled = false;
         btn.innerHTML = textoOriginal;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
         mostrarMensaje(e.message, 'error');
         console.error(e);
     }
 }
-
 async function toggleActivo(barberoId, btn) {
     const textoOriginal = btn.innerHTML;
     btn.disabled = true;
