@@ -249,6 +249,7 @@ def index():
     resp.set_cookie("cliente_id", c_id, max_age=31536000)
     return resp
 
+
 @app.route("/", methods=["POST"])
 def agendar():
     try:
