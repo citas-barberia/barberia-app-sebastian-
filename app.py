@@ -77,6 +77,18 @@ def _headers():
 def obtener_almuerzo_barbero(barbero_id):
     return HORARIOS_ALMUERZO.get(str(barbero_id))
 
+def cita_choca_con_almuerzo(barbero_id, hora, servicio):
+    almuerzo = obtener_almuerzo_barbero(barbero_id)
+    if not almuerzo:
+        return False
+
+    inicio_cita = datetime.strptime(hora.upper(), "%I:%M%p")
+    fin_cita = inicio_cita + timedelta(minutes=calcular_duracion(servicio))
+
+    inicio_almuerzo = datetime.strptime(almuerzo["inicio"], "%I:%M%p")
+    fin_almuerzo = datetime.strptime(almuerzo["fin"], "%I:%M%p")
+
+    return inicio_cita < fin_almuerzo and fin_cita > inicio_almuerzo
 def normalizar_numero_cr(numero):
     numero = str(numero).strip().replace(" ", "").replace("-", "").replace("+", "")
     if numero.startswith("506"):
@@ -317,6 +329,10 @@ def agendar():
             flash("El servicio seleccionado no es válido.")
             return redirect(url_for("index"))
 
+        if cita_choca_con_almuerzo(barbero_id, hora, servicio):
+            flash("Ese horario no está disponible porque coincide con la hora de comida del barbero.")
+            return redirect(url_for("index"))
+
         hoy_cr = datetime.now(TZ).strftime("%Y-%m-%d")
         if fecha < hoy_cr:
             flash("No puedes agendar en una fecha pasada.")
@@ -390,6 +406,7 @@ def agendar():
         enviar_whatsapp_texto(cliente_telefono, mensaje_cliente)
 
         flash("¡Cita agendada correctamente!")
+
     except Exception as e:
         print(f"Error agendando: {e}")
         flash("Ocurrió un error al agendar.")
