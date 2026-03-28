@@ -258,7 +258,8 @@ def index():
     for barbero in barberos_info:
         bid = str(barbero.get("id"))
 
-        if barbero.get("activo") and barbero.get("disponible_hoy"):
+        # Disponible = acepta citas en general (hoy o futuro)
+        if bool(barbero.get("disponible_hoy", False)):
             nombre = BARBEROS.get(bid, {}).get("nombre", barbero.get("nombre", "Barbero"))
             barberos_visibles[bid] = {
                 "nombre": nombre,
@@ -295,10 +296,24 @@ def agendar():
         if barbero_id not in BARBEROS:
             flash("El barbero seleccionado no es válido.")
             return redirect(url_for("index"))
-        
-        if fecha == datetime.now(TZ).strftime("%Y-%m-%d") and not barbero_disponible_hoy(barbero_id):
-            flash("Ese barbero no está disponible hoy.")
+
+        barbero = obtener_barbero_info(barbero_id)
+        if not barbero:
+            flash("No se encontró el barbero seleccionado.")
             return redirect(url_for("index"))
+
+        es_hoy = fecha == datetime.now(TZ).strftime("%Y-%m-%d")
+
+        # Hoy: debe estar activo y disponible
+        if es_hoy:
+            if not bool(barbero.get("activo", False)) or not bool(barbero.get("disponible_hoy", False)):
+                flash("Ese barbero no está disponible para citas hoy.")
+                return redirect(url_for("index"))
+        else:
+            # Futuro: solo debe estar disponible
+            if not bool(barbero.get("disponible_hoy", False)):
+                flash("Ese barbero no está disponible para agenda.")
+                return redirect(url_for("index"))
 
         if servicio not in SERVICIOS:
             flash("El servicio seleccionado no es válido.")
@@ -390,12 +405,14 @@ def horas():
     barbero_id = request.args.get("barbero_id")
     servicio = request.args.get("servicio")
     print("ARGS /horas:", fecha, barbero_id, servicio)
+
     if not all([fecha, barbero_id, servicio]):
         return jsonify([])
 
     if barbero_id not in BARBEROS:
         return jsonify([])
 
+    servicio = normalizar_servicio_nombre(servicio)
     if servicio not in SERVICIOS:
         return jsonify([])
 
@@ -403,9 +420,19 @@ def horas():
     if not horario:
         return jsonify([])
 
-    # Si es hoy y el barbero está marcado no disponible, no salen horas
-    if fecha == datetime.now(TZ).strftime("%Y-%m-%d"):
-        if not barbero_disponible_hoy(barbero_id):
+    barbero = obtener_barbero_info(barbero_id)
+    if not barbero:
+        return jsonify([])
+
+    es_hoy = fecha == datetime.now(TZ).strftime("%Y-%m-%d")
+
+    # Hoy: debe estar activo y disponible
+    if es_hoy:
+        if not bool(barbero.get("activo", False)) or not bool(barbero.get("disponible_hoy", False)):
+            return jsonify([])
+    else:
+        # Futuro: solo debe estar disponible
+        if not bool(barbero.get("disponible_hoy", False)):
             return jsonify([])
 
     duracion_nueva = calcular_duracion(servicio)
@@ -457,54 +484,6 @@ def horas():
 
         actual += timedelta(minutes=15)
 
-    return jsonify(disponibles)
-    duracion_nueva = calcular_duracion(servicio)
-    citas = obtener_citas_barbero_fecha(barbero_id, fecha)
-
-    ocupados = []
-    for cita in citas:
-        estado = str(cita.get("estado", "")).lower()
-        if estado == "cancelada":
-            continue
-
-        hora_existente = str(cita.get("hora"))
-        servicio_existente = cita.get("servicio", "")
-        duracion_existente = calcular_duracion(servicio_existente)
-
-        inicio = datetime.strptime(hora_existente, "%H:%M:%S")
-        fin = inicio + timedelta(minutes=duracion_existente)
-        ocupados.append((inicio, fin))
-
-    disponibles = []
-    apertura = datetime.strptime("08:00AM", "%I:%M%p")
-    cierre = datetime.strptime("07:00PM", "%I:%M%p")
-    fecha_hoy_cr = datetime.now(TZ).strftime("%Y-%m-%d")
-    ahora_cr = datetime.now(TZ)
-
-    actual = apertura
-    while actual + timedelta(minutes=duracion_nueva) <= cierre:
-        fin_actual = actual + timedelta(minutes=duracion_nueva)
-        libre = True
-
-        for inicio_ocupado, fin_ocupado in ocupados:
-            if actual < fin_ocupado and fin_actual > inicio_ocupado:
-                libre = False
-                break
-
-        if libre:
-            if fecha == fecha_hoy_cr:
-                hora_slot_hoy = ahora_cr.replace(
-                    hour=actual.hour,
-                    minute=actual.minute,
-                    second=0,
-                    microsecond=0
-                )
-                if hora_slot_hoy > ahora_cr:
-                    disponibles.append(actual.strftime("%I:%M%p").lower())
-            else:
-                disponibles.append(actual.strftime("%I:%M%p").lower())
-
-        actual += timedelta(minutes=15)
     print("HORAS DISPONIBLES:", disponibles)
     return jsonify(disponibles)
 

@@ -275,13 +275,7 @@
             background: #4b5563;
         }
 
-        .btn-estado {
-            background: #16a34a;
-        }
-
-        .btn-estado.off {
-            background: #dc2626;
-        }
+        
 
         .barbero-stats {
             display: grid;
@@ -554,14 +548,12 @@
         {% set canceladas = datos.get('canceladas', []) %}
 
         <div class="barbero-card"
-             data-activo="{{ '1' if barbero.activo else '0' }}"
              data-disponible="{{ '1' if barbero.disponible_hoy else '0' }}">
 
             <div class="barbero-header">
                 <div class="barbero-nombre">{{ barbero.nombre }}</div>
 
                 <div class="badges">
-                    
                     <span class="badge {% if barbero.disponible_hoy %}badge-disponible{% else %}badge-no-disponible{% endif %}">
                         {% if barbero.disponible_hoy %}DISPONIBLE{% else %}NO DISPONIBLE{% endif %}
                     </span>
@@ -574,8 +566,6 @@
                     onclick="toggleDisponibilidad('{{ barbero.id }}', this)">
                     {% if barbero.disponible_hoy %}✓ DISPONIBLE{% else %}X NO DISPONIBLE{% endif %}
                 </button>
-
-                
             </div>
 
             <div class="barbero-stats">
@@ -593,53 +583,51 @@
                     <div class="label">Canceladas</div>
                     <div class="valor">{{ datos.get('canceladas_total', 0) }}</div>
                 </div>
-
-                
             </div>
 
             <div class="citas-list">
                 {% if citas %}
                     {% for cita in citas %}
-             <div class="cita-item">
-    <div class="cita-top">
-        <div class="cita-hora">
-            {% if vista_actual in ['semana', 'mes'] %}
-                {{ cita.fecha }} · {{ cita.hora_formateada }}
-            {% else %}
-                {{ cita.hora_formateada }}
-            {% endif %}
-        </div>
+                    <div class="cita-item">
+                        <div class="cita-top">
+                            <div class="cita-hora">
+                                {% if vista_actual in ['semana', 'mes'] %}
+                                    {{ cita.fecha }} · {{ cita.hora_formateada }}
+                                {% else %}
+                                    {{ cita.hora_formateada }}
+                                {% endif %}
+                            </div>
 
-        {% if cita.estado == 'atendida' %}
-            <span class="badge-atendida">ATENDIDA</span>
-        {% else %}
-            <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
-                {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
-            </span>
-        {% endif %}
-    </div>
+                            {% if cita.estado == 'atendida' %}
+                                <span class="badge-atendida">ATENDIDA</span>
+                            {% else %}
+                                <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
+                                    {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
 
-    <div class="cita-cliente">{{ cita.cliente_nombre }}</div>
-    <div class="cita-servicio">{{ cita.servicio }}</div>
+                        <div class="cita-cliente">{{ cita.cliente_nombre }}</div>
+                        <div class="cita-servicio">{{ cita.servicio }}</div>
 
-    {% if cita.estado != 'atendida' and cita.estado != 'cancelada' %}
-    <div class="cita-botones">
-        <form method="POST" action="/atendida" style="margin:0;">
-            <input type="hidden" name="id" value="{{ cita.id }}">
-            <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
-            <input type="hidden" name="desde_dueno" value="1">
-            <button type="submit" class="btn-cita btn-atendida">Cita atendida</button>
-        </form>
+                        {% if cita.estado != 'atendida' and cita.estado != 'cancelada' and vista_actual == 'inicio' %}
+                        <div class="cita-botones">
+                            <form method="POST" action="/atendida" style="margin:0;">
+                                <input type="hidden" name="id" value="{{ cita.id }}">
+                                <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
+                                <input type="hidden" name="desde_dueno" value="1">
+                                <button type="submit" class="btn-cita btn-atendida">Cita atendida</button>
+                            </form>
 
-        <form method="POST" action="/cancelar_barbero" style="margin:0;">
-            <input type="hidden" name="id" value="{{ cita.id }}">
-            <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
-            <input type="hidden" name="desde_dueno" value="1">
-            <button type="submit" class="btn-cita btn-cancelar">Cancelar</button>
-        </form>
-    </div>
-    {% endif %}
-</div>
+                            <form method="POST" action="/cancelar_barbero" style="margin:0;">
+                                <input type="hidden" name="id" value="{{ cita.id }}">
+                                <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
+                                <input type="hidden" name="desde_dueno" value="1">
+                                <button type="submit" class="btn-cita btn-cancelar">Cancelar</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
                     {% endfor %}
                 {% else %}
                     <div class="cita-vacia">{{ empty_text_panel }}</div>
