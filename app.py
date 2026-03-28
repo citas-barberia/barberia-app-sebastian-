@@ -448,7 +448,7 @@ def horas():
 
     ocupados = []
 
-    # Citas ya agendadas
+    # Citas existentes
     for cita in citas:
         estado = str(cita.get("estado", "")).lower()
         if estado == "cancelada":
@@ -462,7 +462,7 @@ def horas():
         fin = inicio + timedelta(minutes=duracion_existente)
         ocupados.append((inicio, fin))
 
-    # Bloque de almuerzo del barbero
+    # Almuerzo: solo cliente
     almuerzo = obtener_almuerzo_barbero(barbero_id)
     if almuerzo:
         inicio_almuerzo = datetime.strptime(almuerzo["inicio"], "%I:%M%p")
@@ -501,7 +501,80 @@ def horas():
 
         actual += timedelta(minutes=15)
 
-    print("HORAS DISPONIBLES:", disponibles)
+    print("HORAS DISPONIBLES CLIENTE:", disponibles)
+    return jsonify(disponibles)
+
+@app.route("/horas_admin")
+def horas_admin():
+    fecha = request.args.get("fecha")
+    barbero_id = request.args.get("barbero_id")
+    servicio = request.args.get("servicio")
+    print("ARGS /horas_admin:", fecha, barbero_id, servicio)
+
+    if not all([fecha, barbero_id, servicio]):
+        return jsonify([])
+
+    if barbero_id not in BARBEROS:
+        return jsonify([])
+
+    servicio = normalizar_servicio_nombre(servicio)
+    if servicio not in SERVICIOS:
+        return jsonify([])
+
+    horario = obtener_horario_por_fecha(fecha)
+    if not horario:
+        return jsonify([])
+
+    duracion_nueva = calcular_duracion(servicio)
+    citas = obtener_citas_barbero_fecha(barbero_id, fecha)
+
+    ocupados = []
+    for cita in citas:
+        estado = str(cita.get("estado", "")).lower()
+        if estado == "cancelada":
+            continue
+
+        hora_existente = str(cita.get("hora"))
+        servicio_existente = cita.get("servicio", "")
+        duracion_existente = calcular_duracion(servicio_existente)
+
+        inicio = datetime.strptime(hora_existente, "%H:%M:%S")
+        fin = inicio + timedelta(minutes=duracion_existente)
+        ocupados.append((inicio, fin))
+
+    disponibles = []
+    apertura = datetime.strptime(horario["inicio"], "%I:%M%p")
+    cierre = datetime.strptime(horario["fin"], "%I:%M%p")
+
+    fecha_hoy_cr = datetime.now(TZ).strftime("%Y-%m-%d")
+    ahora_cr = datetime.now(TZ)
+
+    actual = apertura
+    while actual + timedelta(minutes=duracion_nueva) <= cierre:
+        fin_actual = actual + timedelta(minutes=duracion_nueva)
+        libre = True
+
+        for inicio_ocupado, fin_ocupado in ocupados:
+            if actual < fin_ocupado and fin_actual > inicio_ocupado:
+                libre = False
+                break
+
+        if libre:
+            if fecha == fecha_hoy_cr:
+                hora_slot_hoy = ahora_cr.replace(
+                    hour=actual.hour,
+                    minute=actual.minute,
+                    second=0,
+                    microsecond=0
+                )
+                if hora_slot_hoy > ahora_cr:
+                    disponibles.append(actual.strftime("%I:%M%p").lower())
+            else:
+                disponibles.append(actual.strftime("%I:%M%p").lower())
+
+        actual += timedelta(minutes=15)
+
+    print("HORAS DISPONIBLES ADMIN:", disponibles)
     return jsonify(disponibles)
 
 

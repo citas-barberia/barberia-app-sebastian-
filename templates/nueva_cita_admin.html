@@ -241,7 +241,7 @@ async function cargarHorasManual() {
     if (!barbero_id || !fecha || !servicio) return;
 
     try {
-        const res = await fetch(`/horas?fecha=${encodeURIComponent(fecha)}&barbero_id=${encodeURIComponent(barbero_id)}&servicio=${encodeURIComponent(servicio)}`);
+       const res = await fetch(`/horas_admin?fecha=${fecha}&barbero_id=${barbero_id}&servicio=${encodeURIComponent(servicio)}`);
         const horas = await res.json();
 
         if (!Array.isArray(horas)) return;
