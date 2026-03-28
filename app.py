@@ -35,6 +35,11 @@ ALIAS_SERVICIOS = {
     "Corte + barba": "Corte y barba premium",
     "Barba": "Barba premium",
 }
+HORARIOS_ALMUERZO = {
+    "1": {"inicio": "11:30AM", "fin": "12:30PM"},  # William
+    "2": {"inicio": "12:00PM", "fin": "01:00PM"},  # Jose Luis
+    "3": {"inicio": "12:00PM", "fin": "01:00PM"},  # Juan Carlos
+}
 SERVICIOS = {
     "Corte premium": {"precio": 6000, "duracion": 30},
     "Corte de cabello": {"precio": 6000, "duracion": 30},
@@ -69,6 +74,8 @@ def _headers():
         "Content-Type": "application/json"
     }
 
+def obtener_almuerzo_barbero(barbero_id):
+    return HORARIOS_ALMUERZO.get(str(barbero_id))
 
 def normalizar_numero_cr(numero):
     numero = str(numero).strip().replace(" ", "").replace("-", "").replace("+", "")
@@ -416,7 +423,6 @@ def horas():
     if not barbero:
         return jsonify([])
 
-    # Solo revisar disponibilidad
     if not bool(barbero.get("disponible_hoy", False)):
         return jsonify([])
 
@@ -424,6 +430,8 @@ def horas():
     citas = obtener_citas_barbero_fecha(barbero_id, fecha)
 
     ocupados = []
+
+    # Citas ya agendadas
     for cita in citas:
         estado = str(cita.get("estado", "")).lower()
         if estado == "cancelada":
@@ -436,6 +444,13 @@ def horas():
         inicio = datetime.strptime(hora_existente, "%H:%M:%S")
         fin = inicio + timedelta(minutes=duracion_existente)
         ocupados.append((inicio, fin))
+
+    # Bloque de almuerzo del barbero
+    almuerzo = obtener_almuerzo_barbero(barbero_id)
+    if almuerzo:
+        inicio_almuerzo = datetime.strptime(almuerzo["inicio"], "%I:%M%p")
+        fin_almuerzo = datetime.strptime(almuerzo["fin"], "%I:%M%p")
+        ocupados.append((inicio_almuerzo, fin_almuerzo))
 
     disponibles = []
     apertura = datetime.strptime(horario["inicio"], "%I:%M%p")
@@ -468,9 +483,6 @@ def horas():
                 disponibles.append(actual.strftime("%I:%M%p").lower())
 
         actual += timedelta(minutes=15)
-
-    print("HORAS DISPONIBLES:", disponibles)
-    return jsonify(disponibles)
 
     print("HORAS DISPONIBLES:", disponibles)
     return jsonify(disponibles)
