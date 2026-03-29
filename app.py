@@ -355,6 +355,8 @@ def agendar():
                 return redirect(url_for("index"))
 
         hora_db = datetime.strptime(hora.upper(), "%I:%M%p").strftime("%H:%M:%S")
+        token_cancelacion = str(uuid.uuid4())
+        link_cancelacion = f"{request.host_url.rstrip('/')}/cancelar/{token_cancelacion}"
 
         data = {
             "cliente_nombre": cliente,
@@ -365,7 +367,8 @@ def agendar():
             "barbero_id": int(barbero_id),
             "estado": "pendiente",
             "origen": "online",
-            "recordatorio_30_enviado": False
+            "recordatorio_30_enviado": False,
+            "token_cancelacion": token_cancelacion
         }
 
         r = requests.post(
@@ -394,13 +397,15 @@ def agendar():
         )
 
         mensaje_cliente = (
-            f"✅ Tu cita fue confirmada\n"
-            f"Barbero: {nombre_barbero}\n"
-            f"Servicio: {servicio}\n"
-            f"Fecha: {fecha}\n"
-            f"Hora: {hora}\n"
-            f"Te esperamos en la barbería."
-        )
+    f"✅ Tu cita fue confirmada\n"
+    f"Barbero: {nombre_barbero}\n"
+    f"Servicio: {servicio}\n"
+    f"Fecha: {fecha}\n"
+    f"Hora: {hora}\n"
+    f"Te esperamos en la barbería.\n\n"
+    f"Si deseas cancelar tu cita, toca aquí:\n"
+    f"{link_cancelacion}"
+)
 
         enviar_whatsapp_texto(telefono_barbero, mensaje_barbero)
         enviar_whatsapp_texto(cliente_telefono, mensaje_cliente)
@@ -650,6 +655,50 @@ def cancelar_cliente():
         flash("Ocurrió un error al cancelar la cita.")
 
     return redirect(url_for("index"))
+
+@app.route("/cancelar/<token>")
+def cancelar_por_token(token):
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/citas?token_cancelacion=eq.{token}"
+        res = requests.get(url, headers=_headers(), timeout=20)
+
+        if res.status_code != 200:
+            flash("No se pudo validar la cita.")
+            return redirect(url_for("index"))
+
+        data = res.json()
+        citas = data if isinstance(data, list) else []
+
+        if not citas:
+            flash("No se encontró una cita válida para cancelar.")
+            return redirect(url_for("index"))
+
+        cita = citas[0]
+
+        if str(cita.get("estado", "")).lower() == "cancelada":
+            flash("Esta cita ya había sido cancelada.")
+            return redirect(url_for("index"))
+
+        cita_id = cita.get("id")
+
+        patch = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}",
+            headers=_headers(),
+            json={"estado": "cancelada"},
+            timeout=20
+        )
+
+        if patch.status_code not in [200, 204]:
+            flash("No se pudo cancelar la cita.")
+            return redirect(url_for("index"))
+
+        flash("Tu cita fue cancelada correctamente.")
+        return redirect(url_for("index"))
+
+    except Exception as e:
+        print("Error cancelando por token:", e)
+        flash("Ocurrió un error al cancelar la cita.")
+        return redirect(url_for("index"))
 
 
 @app.route("/panel/<id_barbero>")
