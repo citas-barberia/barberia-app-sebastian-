@@ -20,6 +20,41 @@
         .flash { background: #d4af37; color: #000; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; font-weight: bold; }
         .mini-texto { color: #bbb; font-size: 13px; margin-top: 6px; }
         .separador { border-top: 1px solid #2a2a2a; margin: 28px 0; }
+        .cancelar-box {
+    margin-top: 24px;
+    background: #161719;
+    border: 1px solid #27272a;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
+
+.btn-cancelar-link {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: #991b1b;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 800;
+    transition: 0.2s ease;
+}
+
+.btn-cancelar-link:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+.cancelar-texto {
+    margin-top: 12px;
+    color: #9ca3af;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.5;
+}
     </style>
 </head>
 <body>
@@ -87,38 +122,25 @@
     </form>
 
     <div class="separador"></div>
+    <div class="cancelar-box">
+    <a href="#" class="btn-cancelar-link">Cancelar cita</a>
+    <p class="cancelar-texto">
+        Para cancelar tu cita, utiliza el enlace que recibiste por WhatsApp al confirmar tu reserva.
+    </p>
+</div>
 
     <h2>Cancelar cita</h2>
 
-    <form action="/cancelar_cliente" method="POST">
-        <div class="form-group">
-            <label>Tu Nombre:</label>
-            <input type="text" name="cliente" placeholder="Escribe tu nombre exacto" required>
-        </div>
-
-        <div class="form-group">
-            <label>Barbero:</label>
-            <select name="barbero_id" required>
-                <option value="" disabled selected>Selecciona barbero</option>
-                {% for id, info in barberos.items() %}
-                <option value="{{ id }}">{{ info.nombre }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Fecha de la cita:</label>
-            <input type="date" name="fecha" value="{{ hoy_iso }}" min="{{ hoy_iso }}" required>
-        </div>
-
-        <div class="form-group">
-            <label>Hora de la cita:</label>
-            <input type="text" name="hora" placeholder="Ejemplo: 08:00am" required>
-            <div class="mini-texto">Escribe la hora igual a como la reservaste. Ejemplo: 08:00am</div>
-        </div>
-
-        <button type="submit" class="btn-cancelar">CANCELAR CITA</button>
-    </form>
+    mensaje_cliente = (
+    f"✅ Tu cita fue confirmada\n"
+    f"Barbero: {nombre_barbero}\n"
+    f"Servicio: {servicio}\n"
+    f"Fecha: {fecha}\n"
+    f"Hora: {hora}\n"
+    f"Te esperamos en la barbería.\n\n"
+    f"Si deseas cancelar tu cita, toca aquí:\n"
+    f"{link_cancelacion}"
+)
 </div>
 
 <script>
