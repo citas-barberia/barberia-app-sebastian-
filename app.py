@@ -656,7 +656,7 @@ def cancelar_cliente():
 
     return redirect(url_for("index"))
 
-@app.route("/cancelar/<token>")
+@app.route("/cancelar/<token>", methods=["GET", "POST"])
 def cancelar_por_token(token):
     try:
         url = f"{SUPABASE_URL}/rest/v1/citas?token_cancelacion=eq.{token}"
@@ -675,9 +675,35 @@ def cancelar_por_token(token):
 
         cita = citas[0]
 
+        if request.method == "GET":
+            return render_template(
+                "cancelar_cita.html",
+                cita={
+                    "id": cita.get("id"),
+                    "cliente_nombre": cita.get("cliente_nombre", ""),
+                    "barbero_id": str(cita.get("barbero_id", "")),
+                    "barbero_nombre": BARBEROS.get(str(cita.get("barbero_id", "")), {}).get("nombre", "Barbero"),
+                    "servicio": cita.get("servicio", ""),
+                    "fecha": cita.get("fecha", ""),
+                    "hora": formatear_hora(cita.get("hora", "")),
+                    "estado": cita.get("estado", "")
+                }
+            )
+
         if str(cita.get("estado", "")).lower() == "cancelada":
-            flash("Esta cita ya había sido cancelada.")
-            return redirect(url_for("index"))
+            return render_template(
+                "cancelar_cita.html",
+                cita={
+                    "id": cita.get("id"),
+                    "cliente_nombre": cita.get("cliente_nombre", ""),
+                    "barbero_id": str(cita.get("barbero_id", "")),
+                    "barbero_nombre": BARBEROS.get(str(cita.get("barbero_id", "")), {}).get("nombre", "Barbero"),
+                    "servicio": cita.get("servicio", ""),
+                    "fecha": cita.get("fecha", ""),
+                    "hora": formatear_hora(cita.get("hora", "")),
+                    "estado": cita.get("estado", "")
+                }
+            )
 
         cita_id = cita.get("id")
         barbero_id = str(cita.get("barbero_id", ""))
@@ -697,7 +723,6 @@ def cancelar_por_token(token):
             flash("No se pudo cancelar la cita.")
             return redirect(url_for("index"))
 
-        # Aviso al barbero
         nombre_barbero = BARBEROS.get(barbero_id, {}).get("nombre", "Barbero")
         telefono_barbero = BARBEROS.get(barbero_id, {}).get("telefono", "")
 
@@ -712,8 +737,14 @@ def cancelar_por_token(token):
             )
             enviar_whatsapp_texto(telefono_barbero, mensaje_barbero)
 
-        flash("Tu cita fue cancelada correctamente.")
-        return redirect(url_for("index"))
+        return render_template(
+            "cancelacion_exitosa.html",
+            cliente_nombre=cliente_nombre,
+            barbero_nombre=nombre_barbero,
+            servicio=servicio,
+            fecha=fecha,
+            hora=hora
+        )
 
     except Exception as e:
         print("Error cancelando por token:", e)

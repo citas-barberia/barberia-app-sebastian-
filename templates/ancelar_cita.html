@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancelar cita</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0b0b0b; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 480px; background: #161616; padding: 25px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); border: 1px solid #222; margin-top: 20px; }
+        h1 { color: #d4af37; text-align: center; margin-bottom: 20px; }
+        .info { background: #1f1f1f; border-radius: 16px; padding: 18px; margin-bottom: 20px; }
+        .info p { margin: 10px 0; color: #ddd; }
+        .estado { font-weight: bold; color: #d4af37; }
+        button { width: 100%; padding: 16px; background: #991b1b; color: white; border: none; border-radius: 14px; font-size: 17px; font-weight: 800; cursor: pointer; }
+        button:hover { background: #b91c1c; }
+        .volver { display: block; text-align: center; margin-top: 16px; color: #bbb; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cancelar cita</h1>
+
+        <div class="info">
+            <p><strong>Cliente:</strong> {{ cita.cliente_nombre }}</p>
+            <p><strong>Barbero:</strong> {{ cita.barbero_nombre }}</p>
+            <p><strong>Servicio:</strong> {{ cita.servicio }}</p>
+            <p><strong>Fecha:</strong> {{ cita.fecha }}</p>
+            <p><strong>Hora:</strong> {{ cita.hora }}</p>
+            <p><strong>Estado:</strong> <span class="estado">{{ cita.estado }}</span></p>
+        </div>
+
+        {% if cita.estado|lower != "cancelada" %}
+        <form method="POST">
+            <button type="submit">Cancelar cita</button>
+        </form>
+        {% else %}
+        <p style="text-align:center; color:#fca5a5;">Esta cita ya fue cancelada.</p>
+        {% endif %}
+
+        <a href="/" class="volver">Volver al inicio</a>
+    </div>
+</body>
+</html>

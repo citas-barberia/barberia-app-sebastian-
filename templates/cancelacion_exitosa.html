@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cita cancelada</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0b0b0b; color: #fff; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 480px; background: #161616; padding: 25px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); border: 1px solid #222; margin-top: 20px; text-align: center; }
+        h1 { color: #d4af37; }
+        p { color: #ddd; line-height: 1.6; }
+        a { display: inline-block; margin-top: 18px; padding: 14px 18px; background: #d4af37; color: #000; text-decoration: none; border-radius: 14px; font-weight: 800; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cita cancelada</h1>
+        <p>La cita de <strong>{{ cliente_nombre }}</strong> fue cancelada correctamente.</p>
+        <p><strong>Barbero:</strong> {{ barbero_nombre }}</p>
+        <p><strong>Servicio:</strong> {{ servicio }}</p>
+        <p><strong>Fecha:</strong> {{ fecha }}</p>
+        <p><strong>Hora:</strong> {{ hora }}</p>
+
+        <a href="/">Volver al inicio</a>
+    </div>
+</body>
+</html>
