@@ -193,14 +193,6 @@ def obtener_citas_barbero_fecha(barbero_id, fecha):
         return []
 
 
-def obtener_todas_citas_barbero(barbero_id):
-    url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&order=fecha.asc,hora.asc"
-    try:
-        res = requests.get(url, headers=_headers(), timeout=20)
-        data = res.json()
-        return data if isinstance(data, list) else []
-    except Exception:
-        return []
     
 def obtener_todas_citas_barbero(barbero_id):
     url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&order=fecha.asc,hora.asc"
@@ -1274,14 +1266,24 @@ def crear_cita_manual():
 
 @app.route("/api/recordatorios", methods=["POST"])
 def procesar_recordatorios():
+    auth = request.headers.get("X-CRON-TOKEN")
+    if auth != os.getenv("CRON_SECRET"):
+        return jsonify({"error": "No autorizado"}), 401
+
     try:
         ahora = datetime.now(TZ)
         ventana_inicio = ahora + timedelta(minutes=25)
         ventana_fin = ahora + timedelta(minutes=35)
 
         hoy = ahora.strftime("%Y-%m-%d")
-        url = f"{SUPABASE_URL}/rest/v1/citas?fecha=eq.{hoy}&estado=eq.pendiente&recordatorio_30_enviado=eq.false"
-        res = requests.get(url, headers=_headers(), timeout=20)
+        url = (
+            f"{SUPABASE_URL}/rest/v1/citas"
+            f"?fecha=eq.{hoy}"
+            f"&estado=eq.pendiente"
+            f"&recordatorio_30_enviado=eq.false"
+            f"&select=id,cliente_nombre,cliente_telefono,hora,origen"
+        )
+        res = session.get(url, headers=_headers(), timeout=20)
 
         if res.status_code != 200:
             return jsonify({"error": "No se pudo obtener citas"}), 500
@@ -1305,14 +1307,14 @@ def procesar_recordatorios():
                 cliente_telefono = cita.get("cliente_telefono", "")
                 if cliente_telefono:
                     mensaje = (
-                        f"Hola, te recordamos que tienes una cita agendada en la barbería "
+                        f"Hola {cita.get('cliente_nombre', '')}, te recordamos que tienes una cita "
                         f"hoy a las {formatear_hora(hora_str)}. Te esperamos."
                     )
                     enviar_whatsapp_texto(cliente_telefono, mensaje)
                     recordatorios_enviados += 1
 
                     try:
-                        requests.patch(
+                        session.patch(
                             f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita.get('id')}",
                             headers=_headers(),
                             json={
@@ -1329,7 +1331,6 @@ def procesar_recordatorios():
     except Exception as e:
         print(f"Error procesar_recordatorios: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
