@@ -109,6 +109,7 @@
             font-size: 12px;
             font-weight: bold;
             margin-top: 8px;
+            text-transform: capitalize;
         }
         .pendiente {
             background: #664d03;
@@ -130,7 +131,7 @@
         .acciones form {
             flex: 1;
         }
-        .btn-atender, .btn-cancelar {
+        .btn-atender, .btn-cancelar, .btn-actualizar {
             width: 100%;
             padding: 10px;
             border: none;
@@ -145,6 +146,11 @@
         .btn-cancelar {
             background: #8b1e1e;
             color: #fff;
+        }
+        .btn-actualizar {
+            background: #2b2b2d;
+            color: #fff;
+            margin-bottom: 15px;
         }
         .vacio {
             text-align: center;
@@ -177,20 +183,22 @@
     <div class="box">
         <h1>Panel: {{ stats.nombre }}</h1>
 
-        <div class="auto-actualiza">Este panel se actualiza automáticamente cada 5 segundos.</div>
+        <div class="auto-actualiza">Este panel se actualiza automáticamente cada 30 segundos sin recargar toda la página.</div>
+
+        <button type="button" class="btn-actualizar" onclick="refrescarPanel()">Actualizar ahora</button>
 
         <div class="stats">
             <div class="stat-card">
                 Citas hoy
-                <span class="val">{{ stats.total }}</span>
+                <span class="val" id="stat-total">{{ stats.total }}</span>
             </div>
             <div class="stat-card">
                 Ganancia hoy
-                <span class="val">₡{{ stats.ganancia }}</span>
+                <span class="val" id="stat-ganancia">₡{{ stats.ganancia }}</span>
             </div>
             <div class="stat-card">
                 Canceladas hoy
-                <span class="val">{{ stats.canceladas_hoy }}</span>
+                <span class="val" id="stat-canceladas">{{ stats.canceladas_hoy }}</span>
             </div>
         </div>
 
@@ -215,49 +223,131 @@
         </div>
         {% endif %}
 
-        {% if citas %}
-            {% for cita in citas %}
-                <div class="cita">
-                    <h3>{{ cita.cliente_nombre }}</h3>
-                    <p><strong>Servicio:</strong> {{ cita.servicio }}</p>
-                    <p><strong>Fecha:</strong> {{ cita.fecha }}</p>
-                    <p><strong>Hora:</strong> {{ cita.hora_formateada }}</p>
-                    <p><strong>Precio:</strong> ₡{{ cita.precio }}</p>
+        <div id="citas-container">
+            {% if citas %}
+                {% for cita in citas %}
+                    <div class="cita">
+                        <h3>{{ cita.cliente_nombre }}</h3>
+                        <p><strong>Servicio:</strong> {{ cita.servicio }}</p>
+                        <p><strong>Fecha:</strong> {{ cita.fecha }}</p>
+                        <p><strong>Hora:</strong> {{ cita.hora_formateada }}</p>
+                        <p><strong>Precio:</strong> ₡{{ cita.precio }}</p>
 
-                    {% set estado = cita.estado|default('pendiente') %}
+                        {% set estado = cita.estado|default('pendiente') %}
 
-                    <span class="estado {% if estado == 'atendida' %}atendida{% elif estado == 'cancelada' %}cancelada{% else %}pendiente{% endif %}">
-                        {{ estado }}
-                    </span>
+                        <span class="estado {% if estado == 'atendida' %}atendida{% elif estado == 'cancelada' %}cancelada{% else %}pendiente{% endif %}">
+                            {{ estado }}
+                        </span>
 
-                    {% if estado != 'atendida' and estado != 'cancelada' %}
-                    <div class="acciones">
-                        <form action="{{ url_for('atendida') }}" method="POST">
-                            <input type="hidden" name="id" value="{{ cita.id }}">
-                            <input type="hidden" name="barbero_id" value="{{ stats.id }}">
-                            <button type="submit" class="btn-atender">Marcar atendida</button>
-                        </form>
+                        {% if estado != 'atendida' and estado != 'cancelada' %}
+                        <div class="acciones">
+                            <form action="{{ url_for('atendida') }}" method="POST">
+                                <input type="hidden" name="id" value="{{ cita.id }}">
+                                <input type="hidden" name="barbero_id" value="{{ stats.id }}">
+                                <button type="submit" class="btn-atender">Marcar atendida</button>
+                            </form>
 
-                        <form action="{{ url_for('cancelar_barbero') }}" method="POST">
-                            <input type="hidden" name="id" value="{{ cita.id }}">
-                            <input type="hidden" name="barbero_id" value="{{ stats.id }}">
-                            <button type="submit" class="btn-cancelar">Cancelar cita</button>
-                        </form>
+                            <form action="{{ url_for('cancelar_barbero') }}" method="POST">
+                                <input type="hidden" name="id" value="{{ cita.id }}">
+                                <input type="hidden" name="barbero_id" value="{{ stats.id }}">
+                                <button type="submit" class="btn-cancelar">Cancelar cita</button>
+                            </form>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="vacio">
+                    No hay citas en este filtro.
                 </div>
-            {% endfor %}
-        {% else %}
-            <div class="vacio">
-                No hay citas en este filtro.
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
     <script>
-        setTimeout(() => {
-            window.location.reload();
-        }, 5000);
+        const BARBERO_ID = "{{ stats.id }}";
+        const MODO = "{{ stats.modo }}";
+        const MES = "{{ stats.mes }}";
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function renderCitas(citas) {
+            const container = document.getElementById("citas-container");
+
+            if (!citas || !citas.length) {
+                container.innerHTML = `
+                    <div class="vacio">
+                        No hay citas en este filtro.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = citas.map(cita => {
+                const estado = (cita.estado || "pendiente").toLowerCase();
+                const claseEstado =
+                    estado === "atendida" ? "atendida" :
+                    estado === "cancelada" ? "cancelada" : "pendiente";
+
+                const acciones = (estado !== "atendida" && estado !== "cancelada")
+                    ? `
+                        <div class="acciones">
+                            <form action="/atendida" method="POST">
+                                <input type="hidden" name="id" value="${escapeHtml(cita.id)}">
+                                <input type="hidden" name="barbero_id" value="${escapeHtml(BARBERO_ID)}">
+                                <button type="submit" class="btn-atender">Marcar atendida</button>
+                            </form>
+
+                            <form action="/cancelar_barbero" method="POST">
+                                <input type="hidden" name="id" value="${escapeHtml(cita.id)}">
+                                <input type="hidden" name="barbero_id" value="${escapeHtml(BARBERO_ID)}">
+                                <button type="submit" class="btn-cancelar">Cancelar cita</button>
+                            </form>
+                        </div>
+                    `
+                    : "";
+
+                return `
+                    <div class="cita">
+                        <h3>${escapeHtml(cita.cliente_nombre)}</h3>
+                        <p><strong>Servicio:</strong> ${escapeHtml(cita.servicio)}</p>
+                        <p><strong>Fecha:</strong> ${escapeHtml(cita.fecha)}</p>
+                        <p><strong>Hora:</strong> ${escapeHtml(cita.hora_formateada)}</p>
+                        <p><strong>Precio:</strong> ₡${escapeHtml(cita.precio)}</p>
+                        <span class="estado ${claseEstado}">${escapeHtml(estado)}</span>
+                        ${acciones}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        async function refrescarPanel() {
+            try {
+                const res = await fetch(`/api/panel_barbero/${BARBERO_ID}?solo=${encodeURIComponent(MODO)}&mes=${encodeURIComponent(MES)}`);
+                if (!res.ok) {
+                    throw new Error("No se pudo actualizar el panel");
+                }
+
+                const data = await res.json();
+
+                document.getElementById("stat-total").textContent = data.stats.total;
+                document.getElementById("stat-ganancia").textContent = `₡${data.stats.ganancia}`;
+                document.getElementById("stat-canceladas").textContent = data.stats.canceladas_hoy;
+
+                renderCitas(data.citas);
+            } catch (error) {
+                console.error("Error refrescando panel:", error);
+            }
+        }
+
+        setInterval(refrescarPanel, 30000);
     </script>
 </body>
 </html>

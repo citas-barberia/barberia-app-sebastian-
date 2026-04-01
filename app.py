@@ -17,6 +17,7 @@ except Exception:
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "secret_key_123")
+session = requests.Session()
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "barberia123")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -177,9 +178,15 @@ def obtener_todos_barberos():
 
 
 def obtener_citas_barbero_fecha(barbero_id, fecha):
-    url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&fecha=eq.{fecha}&order=hora.asc"
+    url = (
+        f"{SUPABASE_URL}/rest/v1/citas"
+        f"?barbero_id=eq.{barbero_id}"
+        f"&fecha=eq.{fecha}"
+        f"&order=hora.asc"
+        f"&select=id,hora,servicio,estado,cliente_nombre,cliente_telefono,barbero_id"
+    )
     try:
-        res = requests.get(url, headers=_headers(), timeout=20)
+        res = session.get(url, headers=_headers(), timeout=20)
         data = res.json()
         return data if isinstance(data, list) else []
     except Exception:
@@ -194,12 +201,70 @@ def obtener_todas_citas_barbero(barbero_id):
         return data if isinstance(data, list) else []
     except Exception:
         return []
+    
+def obtener_todas_citas_barbero(barbero_id):
+    url = f"{SUPABASE_URL}/rest/v1/citas?barbero_id=eq.{barbero_id}&order=fecha.asc,hora.asc"
+    try:
+        res = requests.get(url, headers=_headers(), timeout=20)
+        data = res.json()
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+def obtener_citas_barbero_filtradas(barbero_id, modo="hoy", mes=None):
+    hoy_dt = datetime.now(TZ).date()
 
+    if modo == "hoy":
+        fecha_inicio = fecha_fin = hoy_dt.strftime("%Y-%m-%d")
+    elif modo == "manana":
+        manana = hoy_dt + timedelta(days=1)
+        fecha_inicio = fecha_fin = manana.strftime("%Y-%m-%d")
+    elif modo == "historial_2026":
+        mes = mes or datetime.now(TZ).strftime("%m")
+        fecha_inicio = f"2026-{mes}-01"
+
+        if mes == "12":
+            fecha_fin = "2026-12-31"
+        else:
+            anio = 2026
+            mes_int = int(mes)
+            if mes_int == 12:
+                siguiente_mes = datetime(anio + 1, 1, 1)
+            else:
+                siguiente_mes = datetime(anio, mes_int + 1, 1)
+            fecha_fin = (siguiente_mes - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    elif modo == "todas":
+        fecha_inicio = None
+        fecha_fin = None
+    else:
+        fecha_inicio = fecha_fin = hoy_dt.strftime("%Y-%m-%d")
+
+    params = [
+        f"barbero_id=eq.{barbero_id}",
+        "order=fecha.asc,hora.asc",
+        "select=id,cliente_nombre,servicio,fecha,hora,estado,barbero_id,origen"
+    ]
+
+    if fecha_inicio and fecha_fin:
+        params.append(f"fecha=gte.{fecha_inicio}")
+        params.append(f"fecha=lte.{fecha_fin}")
+
+    url = f"{SUPABASE_URL}/rest/v1/citas?{'&'.join(params)}"
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("Error obteniendo citas filtradas:", e)
+
+    return []
 
 def obtener_cita_por_id(cita_id):
     url = f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita_id}"
     try:
-        res = requests.get(url, headers=_headers(), timeout=20)
+        res = session.get(url, headers=_headers(), timeout=20)
         data = res.json()
         if isinstance(data, list) and data:
             return data[0]
