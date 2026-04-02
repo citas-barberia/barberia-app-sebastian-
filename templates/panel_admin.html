@@ -756,7 +756,7 @@ let ultimaFirmaPanel = "{{ resumen.total_citas }}|{{ resumen.total_atendidas }}|
 
 async function vigilarCambiosPanelAdmin() {
     try {
-        const res = await fetch(`/api/panel_admin_admin?vista={{ vista_actual }}`, {
+        const res = await fetch(`/api/panel_admin_meta?vista={{ vista_actual }}`, {
             cache: "no-store"
         });
 
@@ -774,7 +774,6 @@ async function vigilarCambiosPanelAdmin() {
 }
 
 setInterval(vigilarCambiosPanelAdmin, 5000);
-</script>
 </script>
 </body>
 </html>

@@ -1462,6 +1462,60 @@ def nueva_cita_dueno():
         hoy=hoy
     )
 
+@app.route("/api/panel_barbero_meta/<id_barbero>")
+def api_panel_barbero_meta(id_barbero):
+    if id_barbero not in BARBEROS:
+        return jsonify({"success": False, "error": "Barbero no encontrado"}), 404
+
+    citas = obtener_todas_citas_barbero(id_barbero)
+
+    for cita in citas:
+        cita["hora_formateada"] = formatear_hora(cita.get("hora"))
+        cita["precio"] = calcular_precio(cita.get("servicio", ""))
+
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
+    manana = (datetime.now(TZ) + timedelta(days=1)).strftime("%Y-%m-%d")
+    modo = request.args.get("solo", "hoy")
+    mes = request.args.get("mes", datetime.now(TZ).strftime("%m"))
+
+    if modo == "hoy":
+        filtradas = [
+            c for c in citas
+            if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() != "cancelada"
+        ]
+    elif modo == "manana":
+        filtradas = [
+            c for c in citas
+            if str(c.get("fecha")) == manana and str(c.get("estado", "")).lower() != "cancelada"
+        ]
+    elif modo == "historial_2026":
+        filtradas = [c for c in citas if str(c.get("fecha", "")).startswith(f"2026-{mes}-")]
+    else:
+        filtradas = [c for c in citas if str(c.get("estado", "")).lower() != "cancelada"]
+
+    hoy_citas = [
+        c for c in citas
+        if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() != "cancelada"
+    ]
+    hoy_atendidas = [
+        c for c in hoy_citas
+        if str(c.get("estado", "")).lower() == "atendida"
+    ]
+    hoy_canceladas = [
+        c for c in citas
+        if str(c.get("fecha")) == hoy and str(c.get("estado", "")).lower() == "cancelada"
+    ]
+
+    return jsonify({
+        "success": True,
+        "resumen": {
+            "total": len(hoy_citas),
+            "ganancia": sum(calcular_precio(c.get("servicio", "")) for c in hoy_atendidas),
+            "canceladas_hoy": len(hoy_canceladas),
+            "cantidad_filtradas": len(filtradas)
+        }
+    })
+
 @app.route("/api/panel_admin_meta")
 def api_panel_admin_meta():
     vista = request.args.get("vista", "inicio")
