@@ -387,7 +387,7 @@ def enviar_whatsapp_template_recordatorio(numero, nombre_cliente, nombre_barbero
         print("Error enviando template de recordatorio:", e)
         return None
     
-def enviar_whatsapp_template_barbero(numero, cliente, servicio, fecha, hora):
+def enviar_whatsapp_template_barbero(numero, cliente, servicio, fecha, hora, barbero):
     try:
         if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             print("WhatsApp no configurado en variables de entorno.")
@@ -412,7 +412,8 @@ def enviar_whatsapp_template_barbero(numero, cliente, servicio, fecha, hora):
                             {"type": "text", "text": str(cliente)},
                             {"type": "text", "text": str(servicio)},
                             {"type": "text", "text": str(fecha)},
-                            {"type": "text", "text": str(hora)}
+                            {"type": "text", "text": str(hora)},
+                            {"type": "text", "text": str(barbero)}
                         ]
                     }
                 ]
@@ -588,7 +589,8 @@ def agendar():
             cliente=cliente,
             servicio=servicio,
             fecha=fecha,
-            hora=hora
+            hora=hora,
+            barbero=nombre_barbero
         )
 
         if r_barbero is None or r_barbero.status_code not in [200, 201]:
