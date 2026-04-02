@@ -588,7 +588,27 @@ def index():
     resp.set_cookie("cliente_id", c_id, max_age=31536000)
     return resp
 
+@app.route("/api/barberos_disponibles")
+def api_barberos_disponibles():
+    try:
+        barberos_info = obtener_todos_barberos()
 
+        barberos_visibles = {}
+        for barbero in barberos_info:
+            bid = str(barbero.get("id"))
+
+            if bool(barbero.get("disponible_hoy", False)):
+                nombre = BARBEROS.get(bid, {}).get("nombre", barbero.get("nombre", "Barbero"))
+                barberos_visibles[bid] = {
+                    "nombre": nombre,
+                    "telefono": BARBEROS.get(bid, {}).get("telefono", "")
+                }
+
+        return jsonify({"success": True, "barberos": barberos_visibles})
+    except Exception as e:
+        print("Error obteniendo barberos disponibles:", e)
+        return jsonify({"success": False, "barberos": {}}), 500
+    
 @app.route("/", methods=["POST"])
 def agendar():
     try:

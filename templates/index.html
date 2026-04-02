@@ -133,6 +133,32 @@
 </div>
 
 <script>
+let ultimoBarberosJson = "";
+
+function construirOpcionesBarberos(barberos, seleccionadoActual) {
+    const select = document.getElementById("barbero_id");
+    const ids = Object.keys(barberos || {});
+
+    let html = '<option value="" disabled>Selecciona barbero</option>';
+
+    ids.forEach(id => {
+        const nombre = barberos[id].nombre || "Barbero";
+        const selected = id === seleccionadoActual ? "selected" : "";
+        html += `<option value="${id}" ${selected}>${nombre}</option>`;
+    });
+
+    select.innerHTML = html;
+
+    if (!seleccionadoActual || !barberos[seleccionadoActual]) {
+        select.value = "";
+    }
+}
+
+function limpiarHoras(mensaje = "Primero elige barbero y servicio...") {
+    const select = document.getElementById("hora_select");
+    select.innerHTML = `<option value="">${mensaje}</option>`;
+}
+
 async function actualizarHoras() {
     const b_id = document.getElementById('barbero_id').value;
     const serv = document.getElementById('servicio').value;
@@ -140,14 +166,14 @@ async function actualizarHoras() {
     const select = document.getElementById('hora_select');
 
     if (!b_id || !serv || !fecha) {
-        select.innerHTML = '<option value="">Primero elige barbero y servicio...</option>';
+        limpiarHoras("Primero elige barbero y servicio...");
         return;
     }
 
     select.innerHTML = '<option value="">Buscando horas...</option>';
 
     try {
-        const res = await fetch(`/horas?barbero_id=${encodeURIComponent(b_id)}&servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(fecha)}&t=${Date.now()}`);
+        const res = await fetch(`/horas?barbero_id=${encodeURIComponent(b_id)}&servicio=${encodeURIComponent(serv)}&fecha=${encodeURIComponent(fecha)}`);
         const horas = await res.json();
 
         select.innerHTML = '';
@@ -168,6 +194,53 @@ async function actualizarHoras() {
         select.innerHTML = '<option value="">Error al cargar horas</option>';
     }
 }
+
+async function refrescarBarberos() {
+    const select = document.getElementById("barbero_id");
+    const seleccionadoActual = select.value;
+
+    try {
+        const res = await fetch("/api/barberos_disponibles");
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            return;
+        }
+
+        const nuevoJson = JSON.stringify(data.barberos);
+
+        if (nuevoJson === ultimoBarberosJson) {
+            return;
+        }
+
+        ultimoBarberosJson = nuevoJson;
+        construirOpcionesBarberos(data.barberos, seleccionadoActual);
+
+        const barberoSigueDisponible = data.barberos[seleccionadoActual];
+
+        if (seleccionadoActual && !barberoSigueDisponible) {
+            limpiarHoras("El barbero seleccionado ya no está disponible");
+        }
+    } catch (e) {
+        console.error("Error refrescando barberos:", e);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const opcionesIniciales = {};
+    const select = document.getElementById("barbero_id");
+
+    Array.from(select.options).forEach(opt => {
+        if (opt.value) {
+            opcionesIniciales[opt.value] = { nombre: opt.textContent };
+        }
+    });
+
+    ultimoBarberosJson = JSON.stringify(opcionesIniciales);
+
+    refrescarBarberos();
+    setInterval(refrescarBarberos, 10000);
+});
 </script>
 
 </body>
