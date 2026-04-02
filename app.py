@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, flash, url_for, jso
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from flask import jsonify
 import os
 import uuid
 import requests
