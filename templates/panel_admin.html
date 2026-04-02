@@ -402,45 +402,48 @@
             border-color: rgba(220, 38, 38, 0.35);
         }
 
-        @media (max-width: 768px) {
-            body {
-                padding: 16px;
-            }
+@media (max-width: 768px) {
+    body {
+        padding: 16px;
+    }
 
-            h1 {
-                font-size: 38px;
-            }
+    h1 {
+        font-size: 38px;
+    }
 
-            .panel-crear h2 {
-                font-size: 24px;
-            }
+    .panel-crear h2 {
+        font-size: 24px;
+    }
 
-            .barbero-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+    .barbero-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-            .badges {
-                justify-content: flex-start;
-            }
+    .badges {
+        justify-content: flex-start;
+    }
 
-            .barbero-stats {
-                grid-template-columns: 1fr;
-            }
+    .barbero-stats {
+        grid-template-columns: 1fr;
+    }
 
-            .resumen-card .valor {
-                font-size: 38px;
-            }
-        }
+    .citas-list {
+        grid-template-columns: 1fr;
+    }
+
+    .resumen-card .valor {
+        font-size: 38px;
+    }
+}
         .cita-botones {
     display: flex;
     gap: 8px;
     margin-top: 10px;
     flex-wrap: wrap;
 }
-.citas-list {
-    grid-template-columns: 1fr;
-}
+
+
 .btn-cita {
     border: none;
     border-radius: 10px;
@@ -588,56 +591,54 @@
                     <div class="valor" id="canceladas-{{ barbero.id }}">{{ datos.get('canceladas_total', 0) }}</div>
                 </div>
             </div>
+<div class="citas-list" id="lista-citas-{{ barbero.id }}">
+    {% if citas %}
+        {% for cita in citas %}
+        <div class="cita-item">
+            <div class="cita-top">
+                <div class="cita-hora">
+                    {% if vista_actual in ['semana', 'mes'] %}
+                        {{ cita.fecha }} · {{ cita.hora_formateada }}
+                    {% else %}
+                        {{ cita.hora_formateada }}
+                    {% endif %}
+                </div>
 
-            <div class="citas-list" id="lista-citas-{{ barbero.id }}"></div>
-                {% if citas %}
-                    {% for cita in citas %}
-                    <div class="cita-item">
-                        <div class="cita-top">
-                            <div class="cita-hora">
-                                {% if vista_actual in ['semana', 'mes'] %}
-                                    {{ cita.fecha }} · {{ cita.hora_formateada }}
-                                {% else %}
-                                    {{ cita.hora_formateada }}
-                                {% endif %}
-                            </div>
-
-                            {% if cita.estado == 'atendida' %}
-                                <span class="badge-atendida">ATENDIDA</span>
-                            {% else %}
-                                <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
-                                    {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
-                                </span>
-                            {% endif %}
-                        </div>
-
-                        <div class="cita-cliente">{{ cita.cliente_nombre }}</div>
-                        <div class="cita-servicio">{{ cita.servicio }}</div>
-
-                        {% if cita.estado != 'atendida' and cita.estado != 'cancelada' and vista_actual == 'inicio' %}
-                        <div class="cita-botones">
-                            <form method="POST" action="/atendida" style="margin:0;">
-                                <input type="hidden" name="id" value="{{ cita.id }}">
-                                <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
-                                <input type="hidden" name="desde_dueno" value="1">
-                                <button type="submit" class="btn-cita btn-atendida">Cita atendida</button>
-                            </form>
-
-                            <form method="POST" action="/cancelar_barbero" style="margin:0;">
-                                <input type="hidden" name="id" value="{{ cita.id }}">
-                                <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
-                                <input type="hidden" name="desde_dueno" value="1">
-                                <button type="submit" class="btn-cita btn-cancelar">Cancelar</button>
-                            </form>
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+                {% if cita.estado == 'atendida' %}
+                    <span class="badge-atendida">ATENDIDA</span>
                 {% else %}
-                    <div class="cita-vacia">{{ empty_text_panel }}</div>
+                    <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
+                        {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
+                    </span>
                 {% endif %}
             </div>
 
+            <div class="cita-cliente">{{ cita.cliente_nombre }}</div>
+            <div class="cita-servicio">{{ cita.servicio }}</div>
+
+            {% if cita.estado != 'atendida' and cita.estado != 'cancelada' and vista_actual == 'inicio' %}
+            <div class="cita-botones">
+                <form method="POST" action="/atendida" style="margin:0;">
+                    <input type="hidden" name="id" value="{{ cita.id }}">
+                    <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
+                    <input type="hidden" name="desde_dueno" value="1">
+                    <button type="submit" class="btn-cita btn-atendida">Cita atendida</button>
+                </form>
+
+                <form method="POST" action="/cancelar_barbero" style="margin:0;">
+                    <input type="hidden" name="id" value="{{ cita.id }}">
+                    <input type="hidden" name="barbero_id" value="{{ cita.barbero_id }}">
+                    <input type="hidden" name="desde_dueno" value="1">
+                    <button type="submit" class="btn-cita btn-cancelar">Cancelar</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="cita-vacia">{{ empty_text_panel }}</div>
+    {% endif %}
+</div>
             {% if canceladas %}
                 <div style="margin-top: 14px;">
                     <div style="color:#fca5a5; font-weight:800; margin-bottom:10px; font-size:14px;">
@@ -681,8 +682,6 @@ function mostrarMensaje(texto, tipo) {
     }, 4000);
 }
 
-
-
 async function toggleDisponibilidad(barberoId, btn) {
     const textoOriginal = btn.innerHTML;
     btn.disabled = true;
@@ -753,147 +752,28 @@ async function toggleActivo(barberoId, btn) {
     }
 }
 
-function mostrarMensaje(texto, tipo) {
-    const cont = document.getElementById('mensaje-container');
-    cont.innerHTML = `<div class="mensaje ${tipo}">${texto}</div>`;
-    setTimeout(() => {
-        cont.innerHTML = '';
-    }, 4000);
-}
+let ultimaFirmaPanel = "{{ resumen.total_citas }}|{{ resumen.total_atendidas }}|{{ resumen.total_canceladas }}|{{ resumen.total_ingresos }}";
 
-async function toggleDisponibilidad(barberoId, btn) {
-    const textoOriginal = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
-
+async function vigilarCambiosPanelAdmin() {
     try {
-        const res = await fetch(`/api/barbero/${barberoId}/toggle_disponibilidad`, {
-            method: 'POST'
+        const res = await fetch(`/api/panel_admin_meta?vista={{ vista_actual }}`, {
+            cache: "no-store"
         });
 
+        if (!res.ok) return;
+
         const data = await res.json();
+        const nuevaFirma = `${data.resumen.total_citas}|${data.resumen.total_atendidas}|${data.resumen.total_canceladas}|${data.resumen.total_ingresos}`;
 
-        if (!res.ok || !data.success) {
-            throw new Error(data.error || 'No se pudo cambiar disponibilidad');
+        if (nuevaFirma !== ultimaFirmaPanel) {
+            location.reload();
         }
-
-        const card = btn.closest('.barbero-card');
-        const disponibleAhora = data.disponible_hoy ? '1' : '0';
-
-        card.dataset.disponible = disponibleAhora;
-
-        const badgeDisponible = card.querySelector('.badge-disponible, .badge-no-disponible');
-        if (badgeDisponible) {
-            badgeDisponible.textContent = data.disponible_hoy ? 'DISPONIBLE' : 'NO DISPONIBLE';
-            badgeDisponible.className = `badge ${data.disponible_hoy ? 'badge-disponible' : 'badge-no-disponible'}`;
-        }
-
-        btn.innerHTML = data.disponible_hoy ? '✓ DISPONIBLE' : 'X NO DISPONIBLE';
-        btn.classList.toggle('off', !data.disponible_hoy);
-        btn.disabled = false;
-
-        mostrarMensaje('Disponibilidad actualizada correctamente', 'exito');
     } catch (e) {
-        btn.disabled = false;
-        btn.innerHTML = textoOriginal;
-        mostrarMensaje(e.message, 'error');
-        console.error(e);
+        console.error("Error vigilando cambios del panel admin:", e);
     }
 }
 
-async function toggleActivo(barberoId, btn) {
-    const textoOriginal = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = 'Guardando...';
-    btn.style.opacity = '0.7';
-    btn.style.cursor = 'not-allowed';
-
-    try {
-        const res = await fetch(`/api/barbero/${barberoId}/toggle_activo`, {
-            method: 'POST'
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-            throw new Error(data.error || 'No se pudo cambiar estado');
-        }
-
-        mostrarMensaje('Estado actualizado correctamente', 'exito');
-        location.reload();
-    } catch (e) {
-        btn.disabled = false;
-        btn.innerHTML = textoOriginal;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        mostrarMensaje(e.message, 'error');
-        console.error(e);
-    }
-}
-
-async function refrescarPanelAdmin() {
-    try {
-        const res = await fetch(`/api/panel_admin?vista={{ vista_actual }}`);
-        if (!res.ok) throw new Error('No se pudo actualizar el panel admin');
-
-        const data = await res.json();
-
-        if (document.getElementById('resumen-total-citas')) {
-            document.getElementById('resumen-total-citas').textContent = data.resumen.total_citas;
-        }
-        if (document.getElementById('resumen-total-atendidas')) {
-            document.getElementById('resumen-total-atendidas').textContent = data.resumen.total_atendidas;
-        }
-        if (document.getElementById('resumen-total-canceladas')) {
-            document.getElementById('resumen-total-canceladas').textContent = data.resumen.total_canceladas;
-        }
-        if (document.getElementById('resumen-total-ingresos')) {
-            document.getElementById('resumen-total-ingresos').textContent = `₡${data.resumen.total_ingresos}`;
-        }
-
-        for (const barbero of data.barberos) {
-            const citasEl = document.getElementById(`citas-${barbero.id}`);
-            const gananciaEl = document.getElementById(`ganancia-${barbero.id}`);
-            const canceladasEl = document.getElementById(`canceladas-${barbero.id}`);
-            const listaEl = document.getElementById(`lista-citas-${barbero.id}`);
-
-            if (citasEl) citasEl.textContent = barbero.total;
-            if (gananciaEl) gananciaEl.textContent = `₡${barbero.ganancia}`;
-            if (canceladasEl) canceladasEl.textContent = barbero.canceladas_total;
-
-            if (listaEl) {
-                if (!barbero.citas || !barbero.citas.length) {
-                    listaEl.innerHTML = `<div class="cita-vacia">{{ empty_text_panel }}</div>`;
-                } else {
-                    listaEl.innerHTML = barbero.citas.map(cita => `
-                        <div class="cita-item">
-                            <div class="cita-top">
-                                <div class="cita-hora">
-                                    ${cita.fecha ? `${cita.fecha} · ` : ''}${cita.hora_formateada}
-                                </div>
-
-                                ${cita.estado === 'atendida'
-                                    ? `<span class="badge-atendida">ATENDIDA</span>`
-                                    : `<span class="cita-origen ${cita.origen === 'online' ? 'online' : 'manual'}">
-                                        ${cita.origen === 'online' ? 'Online' : 'Manual'}
-                                      </span>`
-                                }
-                            </div>
-
-                            <div class="cita-cliente">${cita.cliente_nombre}</div>
-                            <div class="cita-servicio">${cita.servicio}</div>
-                        </div>
-                    `).join('');
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error refrescando panel admin:', error);
-    }
-}
-
-setInterval(refrescarPanelAdmin, 3000);
-
+setInterval(vigilarCambiosPanelAdmin, 5000);
 </script>
 </body>
 </html>
