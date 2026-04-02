@@ -433,6 +433,53 @@ def enviar_whatsapp_template_barbero(numero, cliente, servicio, fecha, hora, bar
     except Exception as e:
         print("Error enviando template al barbero:", e)
         return None
+
+def enviar_whatsapp_template_cancelacion_barbero(numero, cliente, servicio, fecha, hora, barbero):
+    try:
+        if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+            print("WhatsApp no configurado en variables de entorno.")
+            return None
+
+        numero = normalizar_numero_cr(numero)
+
+        url = f"https://graph.facebook.com/v23.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": numero,
+            "type": "template",
+            "template": {
+                "name": "cancelacion_cliente_barbero_cr",
+                "language": {
+                    "code": "es_CR"
+                },
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {"type": "text", "text": str(cliente)},
+                            {"type": "text", "text": str(servicio)},
+                            {"type": "text", "text": str(fecha)},
+                            {"type": "text", "text": str(hora)},
+                            {"type": "text", "text": str(barbero)}
+                        ]
+                    }
+                ]
+            }
+        }
+
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
+        print("WHATSAPP CANCELACION BARBERO STATUS:", r.status_code)
+        print("WHATSAPP CANCELACION BARBERO RESPUESTA:", r.text)
+        return r
+
+    except Exception as e:
+        print("Error enviando template de cancelación al barbero:", e)
+        return None        
     
 def inicializar_barberos():
     try:
@@ -923,15 +970,17 @@ def cancelar_por_token(token):
         telefono_barbero = BARBEROS.get(barbero_id, {}).get("telefono", "")
 
         if telefono_barbero:
-            mensaje_barbero = (
-                f"❌ Cita cancelada por el cliente\n"
-                f"Barbero: {nombre_barbero}\n"
-                f"Cliente: {cliente_nombre}\n"
-                f"Servicio: {servicio}\n"
-                f"Fecha: {fecha}\n"
-                f"Hora: {hora}"
+            r_cancelacion_barbero = enviar_whatsapp_template_cancelacion_barbero(
+                numero=telefono_barbero,
+                cliente=cliente_nombre,
+                servicio=servicio,
+                fecha=fecha,
+                hora=hora,
+                barbero=nombre_barbero
             )
-            enviar_whatsapp_texto(telefono_barbero, mensaje_barbero)
+
+            if r_cancelacion_barbero is None or r_cancelacion_barbero.status_code not in [200, 201]:
+                print("No se pudo enviar la notificación de cancelación al barbero.")
 
         return render_template(
             "cancelacion_exitosa.html",
