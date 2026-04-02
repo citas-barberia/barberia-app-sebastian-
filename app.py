@@ -26,7 +26,7 @@ WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 
 BARBEROS = {
-    "1": {"nombre": "William", "telefono": "50672314147"},
+    "1": {"nombre": "William", "telefono": "50670694753"},
     "2": {"nombre": "Jose Luis", "telefono": "50672314147"},
     "3": {"nombre": "Juan Carlos", "telefono": "50672314147"}
 }
