@@ -304,11 +304,12 @@
             line-height: 1;
         }
 
-        .citas-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+       .citas-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 10px;
+}
+
 
         .cita-item {
             background: #202124;
@@ -437,7 +438,9 @@
     margin-top: 10px;
     flex-wrap: wrap;
 }
-
+.citas-list {
+    grid-template-columns: 1fr;
+}
 .btn-cita {
     border: none;
     border-radius: 10px;
