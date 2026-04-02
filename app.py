@@ -341,6 +341,53 @@ def enviar_whatsapp_template_confirmacion(numero, nombre_cliente, nombre_barbero
         print("Error enviando template de WhatsApp:", e)
         return None
     
+def enviar_whatsapp_template_recordatorio(numero, nombre_cliente, nombre_barbero, hora, servicio):
+    try:
+        if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+            print("WhatsApp no configurado en variables de entorno.")
+            return None
+
+        numero = normalizar_numero_cr(numero)
+
+        url = f"https://graph.facebook.com/v23.0/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": numero,
+            "type": "template",
+            "template": {
+                "name": "recordatorio_cita_30min",
+                "language": {
+                    "code": "es_CR"
+                },
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {"type": "text", "text": str(nombre_cliente)},
+                            {"type": "text", "text": str(nombre_barbero)},
+                            {"type": "text", "text": str(hora)},
+                            {"type": "text", "text": str(servicio)}
+                        ]
+                    }
+                ]
+            }
+        }
+
+        headers = {
+            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Content-Type": "application/json"
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
+        print("WHATSAPP RECORDATORIO TEMPLATE STATUS:", r.status_code)
+        print("WHATSAPP RECORDATORIO TEMPLATE RESPUESTA:", r.text)
+        return r
+
+    except Exception as e:
+        print("Error enviando template de recordatorio:", e)
+        return None
+    
+    
 def inicializar_barberos():
     try:
         for b_id, info in BARBEROS.items():
@@ -1281,7 +1328,7 @@ def procesar_recordatorios():
             f"?fecha=eq.{hoy}"
             f"&estado=eq.pendiente"
             f"&recordatorio_30_enviado=eq.false"
-            f"&select=id,cliente_nombre,cliente_telefono,hora,origen"
+            f"&select=id,cliente_nombre,cliente_telefono,hora,origen,barbero_id,servicio"
         )
         res = session.get(url, headers=_headers(), timeout=20)
 
@@ -1306,32 +1353,43 @@ def procesar_recordatorios():
             if ventana_inicio <= hora_cita_dt <= ventana_fin:
                 cliente_telefono = cita.get("cliente_telefono", "")
                 if cliente_telefono:
-                    mensaje = (
-                        f"Hola {cita.get('cliente_nombre', '')}, te recordamos que tienes una cita "
-                        f"hoy a las {formatear_hora(hora_str)}. Te esperamos."
-                    )
-                    enviar_whatsapp_texto(cliente_telefono, mensaje)
-                    recordatorios_enviados += 1
+                    nombre_cliente = cita.get("cliente_nombre", "")
+                    nombre_barbero = BARBEROS.get(str(cita.get("barbero_id", "")), {}).get("nombre", "tu barbero")
+                    servicio = cita.get("servicio", "tu servicio")
+                    hora_formateada = formatear_hora(hora_str)
 
-                    try:
-                        session.patch(
-                            f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita.get('id')}",
-                            headers=_headers(),
-                            json={
-                                "recordatorio_30_enviado": True,
-                                "fecha_recordatorio_30": datetime.now(TZ).isoformat()
-                            },
-                            timeout=20
-                        )
-                    except Exception:
-                        pass
+                    r = enviar_whatsapp_template_recordatorio(
+                        numero=cliente_telefono,
+                        nombre_cliente=nombre_cliente,
+                        nombre_barbero=nombre_barbero,
+                        hora=hora_formateada,
+                        servicio=servicio
+                    )
+
+                    if r is not None and r.status_code in [200, 201]:
+                        recordatorios_enviados += 1
+
+                        try:
+                            session.patch(
+                                f"{SUPABASE_URL}/rest/v1/citas?id=eq.{cita.get('id')}",
+                                headers=_headers(),
+                                json={
+                                    "recordatorio_30_enviado": True,
+                                    "fecha_recordatorio_30": datetime.now(TZ).isoformat()
+                                },
+                                timeout=20
+                            )
+                        except Exception:
+                            pass
+                    else:
+                        print("No se marcó recordatorio como enviado porque WhatsApp no confirmó éxito.")
 
         return jsonify({"success": True, "recordatorios_enviados": recordatorios_enviados})
 
     except Exception as e:
         print(f"Error procesar_recordatorios: {e}")
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
     mode = request.args.get("hub.mode")
