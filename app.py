@@ -832,7 +832,7 @@ def horas():
             else:
                 disponibles.append(actual.strftime("%I:%M%p").lower())
 
-        actual += timedelta(minutes=15)
+        actual += timedelta(minutes=30)
 
     print("HORAS DISPONIBLES CLIENTE:", disponibles)
     return jsonify(disponibles)
@@ -905,7 +905,7 @@ def horas_admin():
             else:
                 disponibles.append(actual.strftime("%I:%M%p").lower())
 
-        actual += timedelta(minutes=15)
+        actual += timedelta(minutes=30)
 
     print("HORAS DISPONIBLES ADMIN:", disponibles)
     return jsonify(disponibles)
