@@ -207,6 +207,17 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group">
+                <label for="duracion_manual">Duración:</label>
+                <select id="duracion_manual">
+                    <option value="">Usar duración del servicio</option>
+                    <option value="30">30 minutos</option>
+                    <option value="45">45 minutos</option>
+                    <option value="60">60 minutos</option>
+                    <option value="90">90 minutos</option>
+                    <option value="120">120 minutos</option>
+                </select>
+            </div>
 
             <div class="form-group">
                 <label for="cliente_manual">Nombre cliente:</label>
@@ -262,6 +273,7 @@ async function crearCitaManual(btn) {
     const fecha = document.getElementById('fecha_manual').value;
     const hora = document.getElementById('hora_manual').value;
     const servicio = document.getElementById('servicio_manual').value;
+    const duracion = document.getElementById('duracion_manual').value;
     const cliente_nombre = document.getElementById('cliente_manual').value.trim() || 'Cliente presencial';
     const observacion = document.getElementById('observacion_manual').value.trim();
 
@@ -283,6 +295,7 @@ async function crearCitaManual(btn) {
                 fecha,
                 hora,
                 servicio,
+                duracion,
                 cliente_nombre,
                 observacion
             })

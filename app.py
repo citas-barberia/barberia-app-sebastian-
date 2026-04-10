@@ -1646,14 +1646,14 @@ def crear_cita_manual():
         fecha = str(payload.get("fecha", "")).strip()
         hora = str(payload.get("hora", "")).strip()
         servicio = str(payload.get("servicio", "")).strip()
+        duracion_manual = int(str(payload.get("duracion", "")).strip() or 0)
         cliente_nombre = str(payload.get("cliente_nombre", "Cliente presencial")).strip() or "Cliente presencial"
         observacion = str(payload.get("observacion", "")).strip()
-
         if not barbero_id or not fecha or not hora:
             return jsonify({"error": "Faltan datos requeridos"}), 400
 
         citas_existentes = obtener_citas_barbero_fecha(barbero_id, fecha)
-        duracion_nueva = calcular_duracion(servicio) if servicio else 30
+        duracion_nueva = duracion_manual if duracion_manual > 0 else (calcular_duracion(servicio) if servicio else 30)
 
         for cita in citas_existentes:
             if str(cita.get("estado", "")).lower() == "cancelada":
