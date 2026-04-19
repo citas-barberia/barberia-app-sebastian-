@@ -1854,16 +1854,16 @@ def crear_walkin():
             return jsonify({"error": "Falta el barbero_id"}), 400
 
         data = {
-            "barber_id": int(barbero_id),
-            "nombre_cliente": cliente_nombre,
-            "telefono": telefono,
-            "servicio": servicio if servicio else "Cliente sin cita",
-            "duracion_estimada": duracion,
-            "notas": notas,
-            "fecha": datetime.now(TZ).strftime("%Y-%m-%d"),
-            "hora_llegada": datetime.now(TZ).isoformat(),
-            "estado": "esperando"
-        }
+    "barbero_id": int(barbero_id),
+    "nombre_cliente": cliente_nombre,
+    "telefono": telefono,
+    "servicio": servicio if servicio else "Cliente sin cita",
+    "duracion_estimada": duracion,
+    "notas": notas,
+    "fecha": datetime.now(TZ).strftime("%Y-%m-%d"),
+    "hora_llegada": datetime.now(TZ).isoformat(),
+    "estado": "esperando"
+}
 
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/walk_in_queue",
