@@ -46,22 +46,26 @@
         }
 
         .filtros {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+    max-width: 100%;
+    padding-bottom: 4px;
+}
         .filtros button {
-            border: none;
-            border-radius: 14px;
-            padding: 14px 20px;
-            font-weight: 700;
-            font-size: 16px;
-            cursor: pointer;
-            background: #1e1f22;
-            color: #fff;
-            transition: 0.2s ease;
-        }
+    border: none;
+    border-radius: 14px;
+    padding: 14px 20px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    background: #1e1f22;
+    color: #fff;
+    transition: 0.2s ease;
+    flex: 0 0 auto;
+}
 
         .filtros button:hover {
             transform: translateY(-1px);
@@ -503,7 +507,7 @@
     <button
         type="button"
         onclick="window.location.href='/dueno/walkins'">
-        Clientes sin cita
+        sin cita
     </button>
 
     <button
