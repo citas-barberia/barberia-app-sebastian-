@@ -364,7 +364,7 @@ def obtener_walkins_hoy(barbero_id=None):
     ]
 
     if barbero_id:
-        params.append(f"barber_id=eq.{barbero_id}")
+        params.append(f"barbero_id=eq.{barbero_id}")
 
     url = f"{SUPABASE_URL}/rest/v1/walk_in_queue?{'&'.join(params)}"
 
@@ -1889,7 +1889,7 @@ def validar_inicio_walkin(walkin_id):
         if not walkin:
             return jsonify({"error": "Cliente no encontrado"}), 404
 
-        barbero_id = str(walkin.get("barber_id", ""))
+        barbero_id = str(walkin.get("barbero_id", ""))
         duracion = int(walkin.get("duracion_estimada") or 30)
 
         riesgo = evaluar_riesgo_walkin(barbero_id, duracion)
@@ -1914,7 +1914,7 @@ def iniciar_walkin(walkin_id):
         if not walkin:
             return jsonify({"error": "Cliente no encontrado"}), 404
 
-        barbero_id = str(walkin.get("barber_id", ""))
+        barbero_id = str(walkin.get("barbero_id", ""))
         duracion = int(walkin.get("duracion_estimada") or 30)
         riesgo = evaluar_riesgo_walkin(barbero_id, duracion)
 
