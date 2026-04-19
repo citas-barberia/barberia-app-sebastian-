@@ -36,7 +36,7 @@
             align-items: flex-start;
             gap: 20px;
             margin-bottom: 24px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .subtitulo {
@@ -51,8 +51,7 @@
     flex-wrap: nowrap;
     overflow-x: auto;
     white-space: nowrap;
-    max-width: 100%;
-    padding-bottom: 4px;
+    flex-shrink: 0;
 }
         .filtros button {
     border: none;
@@ -81,6 +80,7 @@
             grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: 16px;
             margin-bottom: 24px;
+            width: 100%;
         }
 
         .resumen-card,
@@ -406,6 +406,12 @@
             border-color: rgba(220, 38, 38, 0.35);
         }
 
+@media (max-width: 1024px) {
+    .resumen {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     body {
         padding: 16px;
@@ -436,10 +442,15 @@
         grid-template-columns: 1fr;
     }
 
+    .resumen {
+        grid-template-columns: 1fr;
+    }
+
     .resumen-card .valor {
         font-size: 38px;
     }
 }
+
         .cita-botones {
     display: flex;
     gap: 8px;
