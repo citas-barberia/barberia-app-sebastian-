@@ -30,30 +30,22 @@
             line-height: 1.05;
         }
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
-            margin-bottom: 24px;
-            flex-wrap: nowrap;
-        }
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
 
-        .subtitulo {
-            color: #9ca3af;
-            margin-top: 10px;
-            font-size: 16px;
-        }
-
-        .filtros {
+.filtros {
     display: flex;
     gap: 10px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    white-space: nowrap;
-    flex-shrink: 0;
+    flex-wrap: wrap;
 }
-        .filtros button {
+
+.filtros button {
     border: none;
     border-radius: 14px;
     padding: 14px 20px;
@@ -63,26 +55,14 @@
     background: #1e1f22;
     color: #fff;
     transition: 0.2s ease;
-    flex: 0 0 auto;
 }
 
-        .filtros button:hover {
-            transform: translateY(-1px);
-        }
-
-        .filtros button.activo {
-            background: #d4af37;
-            color: #000;
-        }
-
-        .resumen {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-            width: 100%;
-        }
-
+.resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
         .resumen-card,
         .panel-crear,
         .barbero-card {
@@ -495,53 +475,56 @@
 
     <div id="mensaje-container"></div>
 
-  <div class="topbar">
+  
+<div class="topbar">
     <div>
         <h1>{{ titulo_panel }}</h1>
         <div class="subtitulo">{{ subtitulo_panel }}</div>
     </div>
 
-<div class="filtros">
-    <button
-        type="button"
-        class="{% if vista_actual == 'inicio' %}activo{% endif %}"
-        onclick="window.location.href='/dueno?vista=inicio'">
-        Inicio
-    </button>
+    <div class="filtros">
+        <button
+            type="button"
+            class="{% if vista_actual == 'inicio' %}activo{% endif %}"
+            onclick="window.location.href='/dueno?vista=inicio'">
+            Inicio
+        </button>
 
-    <button
-        type="button"
-        onclick="window.location.href='/dueno/nueva-cita'">
-        Nueva cita
-    </button>
+        <button
+            type="button"
+            onclick="window.location.href='/dueno/nueva-cita'">
+            Nueva cita
+        </button>
 
-    <button
-        type="button"
-        onclick="window.location.href='/dueno/walkins'">
-        sin cita
-    </button>
+        <button
+            type="button"
+            onclick="window.location.href='/dueno/walkins'">
+            Cola
+        </button>
 
-    <button
-        type="button"
-        class="{% if vista_actual == 'manana' %}activo{% endif %}"
-        onclick="window.location.href='/dueno?vista=manana'">
-        Mañana
-    </button>
+        <button
+            type="button"
+            class="{% if vista_actual == 'manana' %}activo{% endif %}"
+            onclick="window.location.href='/dueno?vista=manana'">
+            Mañana
+        </button>
 
-    <button
-        type="button"
-        class="{% if vista_actual == 'semana' %}activo{% endif %}"
-        onclick="window.location.href='/dueno?vista=semana'">
-        Semana
-    </button>
+        <button
+            type="button"
+            class="{% if vista_actual == 'semana' %}activo{% endif %}"
+            onclick="window.location.href='/dueno?vista=semana'">
+            Semana
+        </button>
 
-    <button
-        type="button"
-        class="{% if vista_actual == 'mes' %}activo{% endif %}"
-        onclick="window.location.href='/dueno?vista=mes'">
-        Mes
-    </button>
-</div>  
+        <button
+            type="button"
+            class="{% if vista_actual == 'mes' %}activo{% endif %}"
+            onclick="window.location.href='/dueno?vista=mes'">
+            Mes
+        </button>
+    </div>
+</div>
+
 <div class="resumen">
     <div class="resumen-card">
         <div class="label">Total citas</div>
