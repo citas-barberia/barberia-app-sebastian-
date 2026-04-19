@@ -486,42 +486,47 @@
         <div class="subtitulo">{{ subtitulo_panel }}</div>
     </div>
 
-    <div class="filtros">
-        <button
-            type="button"
-            class="{% if vista_actual == 'inicio' %}activo{% endif %}"
-            onclick="window.location.href='/dueno?vista=inicio'">
-            Inicio
-        </button>
+<div class="filtros">
+    <button
+        type="button"
+        class="{% if vista_actual == 'inicio' %}activo{% endif %}"
+        onclick="window.location.href='/dueno?vista=inicio'">
+        Inicio
+    </button>
 
-        <button
-            type="button"
-            onclick="window.location.href='/dueno/nueva-cita'">
-            Nueva cita
-        </button>
+    <button
+        type="button"
+        onclick="window.location.href='/dueno/nueva-cita'">
+        Nueva cita
+    </button>
 
-        <button
-            type="button"
-            class="{% if vista_actual == 'manana' %}activo{% endif %}"
-            onclick="window.location.href='/dueno?vista=manana'">
-            Mañana
-        </button>
+    <button
+        type="button"
+        onclick="window.location.href='/dueno/walkins'">
+        Clientes sin cita
+    </button>
 
-        <button
-            type="button"
-            class="{% if vista_actual == 'semana' %}activo{% endif %}"
-            onclick="window.location.href='/dueno?vista=semana'">
-            Semana
-        </button>
+    <button
+        type="button"
+        class="{% if vista_actual == 'manana' %}activo{% endif %}"
+        onclick="window.location.href='/dueno?vista=manana'">
+        Mañana
+    </button>
 
-        <button
-            type="button"
-            class="{% if vista_actual == 'mes' %}activo{% endif %}"
-            onclick="window.location.href='/dueno?vista=mes'">
-            Mes
-        </button>
-    </div>
-</div>
+    <button
+        type="button"
+        class="{% if vista_actual == 'semana' %}activo{% endif %}"
+        onclick="window.location.href='/dueno?vista=semana'">
+        Semana
+    </button>
+
+    <button
+        type="button"
+        class="{% if vista_actual == 'mes' %}activo{% endif %}"
+        onclick="window.location.href='/dueno?vista=mes'">
+        Mes
+    </button>
+</div>  
 <div class="resumen">
     <div class="resumen-card">
         <div class="label">Total citas</div>

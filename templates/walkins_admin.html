@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Clientes sin cita</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f6f6f6;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .topbar a {
+            text-decoration: none;
+            background: #111;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            background: #111;
+            color: white;
+            font-weight: bold;
+        }
+
+        button:hover {
+            opacity: 0.92;
+        }
+
+        .btn-green { background: #1f8f4d; }
+        .btn-red { background: #c0392b; }
+        .btn-blue { background: #1d4ed8; }
+
+        .hint {
+            color: #666;
+            font-size: 13px;
+            margin-top: -4px;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ececec;
+            text-align: left;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        th {
+            background: #fafafa;
+        }
+
+        .estado {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .estado-esperando {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .estado-en_servicio {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .estado-atendido {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .estado-cancelado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .acciones button {
+            width: auto;
+            padding: 8px 12px;
+            margin: 0;
+        }
+
+        .small {
+            font-size: 12px;
+            color: #666;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tr {
+                background: white;
+                margin-bottom: 12px;
+                border-radius: 12px;
+                padding: 10px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            }
+
+            td {
+                border: none;
+                padding: 8px 0;
+            }
+
+            .acciones {
+                margin-top: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="topbar">
+        <div>
+            <h1 style="margin:0;">Clientes sin cita / Cola de espera</h1>
+            <div class="small">Prueba inicial para registrar clientes que llegan al local</div>
+        </div>
+        <a href="/dueno">Volver al panel admin</a>
+    </div>
+
+    <div id="mensaje"></div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Agregar cliente</h2>
+            <form id="formWalkin">
+                <label>Barbero</label>
+                <select name="barbero_id" required>
+                    <option value="">Seleccione un barbero</option>
+                    {% for b in barberos_info %}
+                        <option value="{{ b.id }}">{{ b.nombre }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Nombre del cliente</label>
+                <input type="text" name="cliente_nombre" required>
+
+                <label>Teléfono</label>
+                <input type="text" name="telefono" placeholder="Opcional">
+
+                <label>Servicio</label>
+                <select name="servicio">
+                    <option value="">Seleccione un servicio</option>
+                    {% for nombre, datos in servicios.items() %}
+                        <option value="{{ nombre }}">{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+
+                <label>Notas</label>
+                <textarea name="notas" placeholder="Opcional"></textarea>
+
+                <button type="submit">Agregar a la cola</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Clientes en espera hoy</h2>
+
+            {% if walkins %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Barbero</th>
+                        <th>Servicio</th>
+                        <th>Llegó</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in walkins %}
+                    <tr>
+                        <td>
+                            <strong>{{ w.nombre_cliente }}</strong><br>
+                            {% if w.telefono %}
+                                <span class="small">{{ w.telefono }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% for b in barberos_info %}
+                                {% if b.id == w.barbero_id %}
+                                    {{ b.nombre }}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ w.servicio or "Cliente sin cita" }}</td>
+                        <td>{{ w.hora_llegada_formateada }}</td>
+                        <td>
+                            <span class="estado estado-{{ w.estado }}">{{ w.estado }}</span>
+                        </td>
+                        <td>
+                            <div class="acciones">
+                                {% if w.estado == "esperando" %}
+                                    <button class="btn-blue" onclick="iniciarWalkin('{{ w.id }}')">Iniciar</button>
+                                    <button class="btn-red" onclick="cancelarWalkin('{{ w.id }}')">Cancelar</button>
+                                {% elif w.estado == "en_servicio" %}
+                                    <button class="btn-green" onclick="finalizarWalkin('{{ w.id }}')">Finalizar</button>
+                                {% else %}
+                                    <span class="small">Sin acciones</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>No hay clientes en cola hoy.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function mostrarMensaje(texto, tipo="success") {
+    const box = document.getElementById("mensaje");
+    box.innerHTML = `<div class="alert alert-${tipo}">${texto}</div>`;
+    setTimeout(() => {
+        box.innerHTML = "";
+    }, 5000);
+}
+
+document.getElementById("formWalkin").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const payload = Object.fromEntries(formData.entries());
+
+    try {
+        const res = await fetch("/api/walkins", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            mostrarMensaje("Cliente agregado correctamente.", "success");
+            setTimeout(() => location.reload(), 700);
+        } else {
+            mostrarMensaje(data.error || "No se pudo guardar el cliente.", "error");
+        }
+    } catch (e) {
+        mostrarMensaje("Error de red al guardar el cliente.", "error");
+    }
+});
+
+async function iniciarWalkin(id) {
+    try {
+        const validar = await fetch(`/api/walkins/${id}/validar_inicio`);
+        const dataValidar = await validar.json();
+
+        if (!dataValidar.success) {
+            mostrarMensaje(dataValidar.error || "No se pudo validar el inicio.", "error");
+            return;
+        }
+
+        let forzar = false;
+
+        if (dataValidar.riesgo && dataValidar.riesgo.nivel === "rojo") {
+            const seguir = confirm(
+                `${dataValidar.riesgo.mensaje}\n\nEste servicio podría chocar con la próxima cita.\n\n¿Desea iniciar de todos modos?`
+            );
+            if (!seguir) return;
+            forzar = true;
+        } else if (dataValidar.riesgo && dataValidar.riesgo.nivel === "amarillo") {
+            const seguir = confirm(
+                `${dataValidar.riesgo.mensaje}\n\nEl tiempo está un poco ajustado.\n\n¿Desea iniciar?`
+            );
+            if (!seguir) return;
+        }
+
+        const res = await fetch(`/api/walkins/${id}/iniciar`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({forzar})
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            mostrarMensaje("Servicio iniciado correctamente.", "success");
+            setTimeout(() => location.reload(), 700);
+        } else {
+            mostrarMensaje(data.error || "No se pudo iniciar el servicio.", "error");
+        }
+    } catch (e) {
+        mostrarMensaje("Error de red al iniciar.", "error");
+    }
+}
+
+async function finalizarWalkin(id) {
+    try {
+        const res = await fetch(`/api/walkins/${id}/finalizar`, {
+            method: "POST"
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            mostrarMensaje("Servicio finalizado correctamente.", "success");
+            setTimeout(() => location.reload(), 700);
+        } else {
+            mostrarMensaje(data.error || "No se pudo finalizar.", "error");
+        }
+    } catch (e) {
+        mostrarMensaje("Error de red al finalizar.", "error");
+    }
+}
+
+async function cancelarWalkin(id) {
+    const confirmar = confirm("¿Seguro que desea cancelar este cliente de la cola?");
+    if (!confirmar) return;
+
+    try {
+        const res = await fetch(`/api/walkins/${id}/cancelar`, {
+            method: "POST"
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            mostrarMensaje("Cliente cancelado correctamente.", "success");
+            setTimeout(() => location.reload(), 700);
+        } else {
+            mostrarMensaje(data.error || "No se pudo cancelar.", "error");
+        }
+    } catch (e) {
+        mostrarMensaje("Error de red al cancelar.", "error");
+    }
+}
+</script>
+</body>
+</html>

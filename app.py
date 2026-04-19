@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, flash, url_for, jsonify, make_response
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from flask import request, jsonify, render_template, session, redirect, url_for, flash
 from zoneinfo import ZoneInfo
 from flask import jsonify
 import os
@@ -75,6 +76,72 @@ def _headers():
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json"
     }
+
+def obtener_proxima_cita(barbero_id):
+    hoy = date.today().isoformat()
+    ahora_hora = datetime.now(TZ).strftime("%H:%M:%S")
+
+    url = (
+        f"{SUPABASE_URL}/rest/v1/citas"
+        f"?barbero_id=eq.{barbero_id}"
+        f"&fecha=eq.{hoy}"
+        f"&estado=in.(pendiente,confirmada)"
+        f"&hora=gt.{ahora_hora}"
+        f"&order=hora.asc"
+        f"&limit=1"
+    )
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data[0] if isinstance(data, list) and data else None
+    except Exception as e:
+        print("Error obteniendo próxima cita:", e)
+
+    return None
+
+def evaluar_riesgo_walkin(barbero_id, duracion_estimada):
+    ahora = datetime.now(TZ)
+    proxima_cita = obtener_proxima_cita(barbero_id)
+
+    if not proxima_cita:
+        return {
+            "nivel": "verde",
+            "mensaje": "No hay más citas agendadas para hoy.",
+            "minutos_margen": None,
+            "proxima_cita": None
+        }
+
+    try:
+        hora_cita_str = proxima_cita.get("hora", "")
+        hora_cita = datetime.strptime(hora_cita_str, "%H:%M:%S").time()
+        cita_dt = datetime.combine(ahora.date(), hora_cita).replace(tzinfo=TZ)
+
+        fin_estimado = ahora + timedelta(minutes=int(duracion_estimada or 30))
+        diferencia_min = int((cita_dt - fin_estimado).total_seconds() / 60)
+
+        if diferencia_min >= 15:
+            nivel = "verde"
+        elif diferencia_min >= 1:
+            nivel = "amarillo"
+        else:
+            nivel = "rojo"
+
+        return {
+            "nivel": nivel,
+            "mensaje": f"La próxima cita es a las {formatear_hora(hora_cita_str)}.",
+            "minutos_margen": diferencia_min,
+            "proxima_cita": proxima_cita
+        }
+    except Exception as e:
+        print("Error evaluando riesgo walk-in:", e)
+        return {
+            "nivel": "verde",
+            "mensaje": "No se pudo evaluar la próxima cita.",
+            "minutos_margen": None,
+            "proxima_cita": None
+        }
 
 def obtener_almuerzo_barbero(barbero_id):
     return HORARIOS_ALMUERZO.get(str(barbero_id))
@@ -288,6 +355,43 @@ def obtener_cita_por_id(cita_id):
         pass
     return None
 
+def obtener_walkins_hoy(barbero_id=None):
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
+
+    params = [
+        f"fecha=eq.{hoy}",
+        "order=hora_llegada.asc"
+    ]
+
+    if barbero_id:
+        params.append(f"barbero_id=eq.{barbero_id}")
+
+    url = f"{SUPABASE_URL}/rest/v1/walk_in_queue?{'&'.join(params)}"
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("Error obteniendo walk-ins:", e)
+
+    return []
+
+
+def obtener_walkin_por_id(walkin_id):
+    url = f"{SUPABASE_URL}/rest/v1/walk_in_queue?id=eq.{walkin_id}"
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, list) and data:
+                return data[0]
+    except Exception as e:
+        print("Error obteniendo walk-in por id:", e)
+
+    return None
 
 def enviar_whatsapp_texto(numero, mensaje):
     try:
@@ -1491,7 +1595,27 @@ def nueva_cita_dueno():
         servicios=SERVICIOS,
         hoy=hoy
     )
+@app.route("/dueno/walkins")
+def vista_walkins_dueno():
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
+    barberos_info = obtener_todos_barberos()
+    walkins = obtener_walkins_hoy()
 
+    for w in walkins:
+        try:
+            w["hora_llegada_formateada"] = datetime.fromisoformat(
+                str(w.get("hora_llegada")).replace("Z", "+00:00")
+            ).astimezone(TZ).strftime("%I:%M %p")
+        except Exception:
+            w["hora_llegada_formateada"] = str(w.get("hora_llegada", ""))
+
+    return render_template(
+        "walkins_admin.html",
+        hoy=hoy,
+        barberos_info=barberos_info,
+        walkins=walkins,
+        servicios=SERVICIOS
+    )
 @app.route("/api/panel_barbero_meta/<id_barbero>")
 def api_panel_barbero_meta(id_barbero):
     if id_barbero not in BARBEROS:
@@ -1700,6 +1824,168 @@ def crear_cita_manual():
         print("ERROR crear_cita_manual:", e)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/walkins", methods=["GET"])
+def api_walkins():
+    try:
+        barbero_id = request.args.get("barbero_id", "").strip()
+        data = obtener_walkins_hoy(barbero_id if barbero_id else None)
+        return jsonify({"success": True, "walkins": data})
+    except Exception as e:
+        print("ERROR api_walkins:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/walkins", methods=["POST"])
+def crear_walkin():
+    try:
+        payload = request.get_json(silent=True) or {}
+
+        barbero_id = str(payload.get("barbero_id", "")).strip()
+        cliente_nombre = str(payload.get("cliente_nombre", "Cliente presencial")).strip() or "Cliente presencial"
+        telefono = str(payload.get("telefono", "")).strip()
+        servicio = normalizar_servicio_nombre(str(payload.get("servicio", "")).strip())
+        notas = str(payload.get("notas", "")).strip()
+
+        duracion = int(str(payload.get("duracion_estimada", "")).strip() or 0)
+        if duracion <= 0:
+            duracion = calcular_duracion(servicio) if servicio else 30
+
+        if not barbero_id:
+            return jsonify({"error": "Falta el barbero_id"}), 400
+
+        data = {
+            "barbero_id": int(barbero_id),
+            "nombre_cliente": cliente_nombre,
+            "telefono": telefono,
+            "servicio": servicio if servicio else "Cliente sin cita",
+            "duracion_estimada": duracion,
+            "notas": notas,
+            "fecha": datetime.now(TZ).strftime("%Y-%m-%d"),
+            "hora_llegada": datetime.now(TZ).isoformat(),
+            "estado": "esperando"
+        }
+
+        res = requests.post(
+            f"{SUPABASE_URL}/rest/v1/walk_in_queue",
+            headers=_headers(),
+            json=data,
+            timeout=20
+        )
+
+        if res.status_code not in [200, 201]:
+            print("ERROR crear_walkin:", res.status_code, res.text)
+            return jsonify({"error": "No se pudo guardar el cliente en espera"}), 500
+
+        return jsonify({"success": True})
+    except Exception as e:
+        print("ERROR crear_walkin:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/walkins/<walkin_id>/validar_inicio", methods=["GET"])
+def validar_inicio_walkin(walkin_id):
+    try:
+        walkin = obtener_walkin_por_id(walkin_id)
+        if not walkin:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+
+        barbero_id = str(walkin.get("barbero_id", ""))
+        duracion = int(walkin.get("duracion_estimada") or 30)
+
+        riesgo = evaluar_riesgo_walkin(barbero_id, duracion)
+
+        return jsonify({
+            "success": True,
+            "walkin": walkin,
+            "riesgo": riesgo
+        })
+    except Exception as e:
+        print("ERROR validar_inicio_walkin:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/walkins/<walkin_id>/iniciar", methods=["POST"])
+def iniciar_walkin(walkin_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        forzar = bool(payload.get("forzar", False))
+
+        walkin = obtener_walkin_por_id(walkin_id)
+        if not walkin:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+
+        barbero_id = str(walkin.get("barbero_id", ""))
+        duracion = int(walkin.get("duracion_estimada") or 30)
+        riesgo = evaluar_riesgo_walkin(barbero_id, duracion)
+
+        if riesgo["nivel"] == "rojo" and not forzar:
+            return jsonify({
+                "error": "Este servicio podría chocar con la próxima cita",
+                "requiere_confirmacion": True,
+                "riesgo": riesgo
+            }), 409
+
+        res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/walk_in_queue?id=eq.{walkin_id}",
+            headers=_headers(),
+            json={
+                "estado": "en_servicio",
+                "hora_inicio_servicio": datetime.now(TZ).isoformat()
+            },
+            timeout=20
+        )
+
+        if res.status_code not in [200, 204]:
+            print("ERROR iniciar_walkin:", res.status_code, res.text)
+            return jsonify({"error": "No se pudo iniciar el servicio"}), 500
+
+        return jsonify({"success": True, "riesgo": riesgo})
+    except Exception as e:
+        print("ERROR iniciar_walkin:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/walkins/<walkin_id>/finalizar", methods=["POST"])
+def finalizar_walkin(walkin_id):
+    try:
+        res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/walk_in_queue?id=eq.{walkin_id}",
+            headers=_headers(),
+            json={
+                "estado": "atendido",
+                "hora_fin_servicio": datetime.now(TZ).isoformat()
+            },
+            timeout=20
+        )
+
+        if res.status_code not in [200, 204]:
+            print("ERROR finalizar_walkin:", res.status_code, res.text)
+            return jsonify({"error": "No se pudo finalizar el servicio"}), 500
+
+        return jsonify({"success": True})
+    except Exception as e:
+        print("ERROR finalizar_walkin:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/walkins/<walkin_id>/cancelar", methods=["POST"])
+def cancelar_walkin(walkin_id):
+    try:
+        res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/walk_in_queue?id=eq.{walkin_id}",
+            headers=_headers(),
+            json={"estado": "cancelado"},
+            timeout=20
+        )
+
+        if res.status_code not in [200, 204]:
+            print("ERROR cancelar_walkin:", res.status_code, res.text)
+            return jsonify({"error": "No se pudo cancelar el cliente"}), 500
+
+        return jsonify({"success": True})
+    except Exception as e:
+        print("ERROR cancelar_walkin:", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/recordatorios", methods=["POST"])
 def procesar_recordatorios():
