@@ -393,6 +393,25 @@ def obtener_walkin_por_id(walkin_id):
 
     return None
 
+def obtener_walkins_barbero_fecha(barbero_id, fecha):
+    url = (
+        f"{SUPABASE_URL}/rest/v1/walk_in_queue"
+        f"?barbero_id=eq.{barbero_id}"
+        f"&fecha=eq.{fecha}"
+        f"&order=hora_llegada.asc"
+    )
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("Error obteniendo walk-ins por barbero y fecha:", e)
+
+    return []
+
+
 def enviar_whatsapp_texto(numero, mensaje):
     try:
         if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
@@ -1444,7 +1463,15 @@ def panel_dueno():
             if str(c.get("estado", "")).lower() == "atendida"
         ]
 
-        ganancia = sum(calcular_precio(c.get("servicio", "")) for c in atendidas)
+        walkins_hoy_barbero = obtener_walkins_barbero_fecha(bid, hoy)
+        walkins_atendidos = [
+            w for w in walkins_hoy_barbero
+            if str(w.get("estado", "")).lower() == "atendido"
+        ]
+
+        ganancia_citas = sum(calcular_precio(c.get("servicio", "")) for c in atendidas)
+        ganancia_walkins = sum(calcular_precio(w.get("servicio", "")) for w in walkins_atendidos)
+        ganancia = ganancia_citas + ganancia_walkins
 
         stats[bid] = {
             "nombre": barbero.get("nombre"),
@@ -1457,18 +1484,33 @@ def panel_dueno():
             "canceladas_total": len(canceladas_barbero)
         }
 
+        walkins_hoy = obtener_walkins_hoy()
+    walkins_atendidos_hoy = [
+        w for w in walkins_hoy
+        if str(w.get("estado", "")).lower() == "atendido"
+    ]
+
+    total_atendidas_citas = len([
+        c for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    ])
+
+    ingresos_citas = sum(
+        calcular_precio(c.get("servicio", ""))
+        for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    )
+
+    ingresos_walkins = sum(
+        calcular_precio(w.get("servicio", ""))
+        for w in walkins_atendidos_hoy
+    )
+
     resumen = {
         "total_citas": len(citas_no_canceladas),
         "total_canceladas": len(citas_canceladas),
-        "total_atendidas": len([
-            c for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        ]),
-        "total_ingresos": sum(
-            calcular_precio(c.get("servicio", ""))
-            for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        )
+        "total_atendidas": total_atendidas_citas + len(walkins_atendidos_hoy),
+        "total_ingresos": ingresos_citas + ingresos_walkins
     }
 
     return render_template(
@@ -1564,18 +1606,33 @@ def api_panel_admin():
             "activo": barbero.get("activo", False)
         })
 
+        walkins_hoy = obtener_walkins_hoy()
+    walkins_atendidos_hoy = [
+        w for w in walkins_hoy
+        if str(w.get("estado", "")).lower() == "atendido"
+    ]
+
+    total_atendidas_citas = len([
+        c for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    ])
+
+    ingresos_citas = sum(
+        calcular_precio(c.get("servicio", ""))
+        for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    )
+
+    ingresos_walkins = sum(
+        calcular_precio(w.get("servicio", ""))
+        for w in walkins_atendidos_hoy
+    )
+
     resumen = {
         "total_citas": len(citas_no_canceladas),
         "total_canceladas": len(citas_canceladas),
-        "total_atendidas": len([
-            c for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        ]),
-        "total_ingresos": sum(
-            calcular_precio(c.get("servicio", ""))
-            for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        )
+        "total_atendidas": total_atendidas_citas + len(walkins_atendidos_hoy),
+        "total_ingresos": ingresos_citas + ingresos_walkins
     }
 
     return jsonify({
@@ -1696,18 +1753,33 @@ def api_panel_admin_meta():
         if str(c.get("estado", "")).lower() == "cancelada"
     ]
 
+    walkins_hoy = obtener_walkins_hoy()
+    walkins_atendidos_hoy = [
+        w for w in walkins_hoy
+        if str(w.get("estado", "")).lower() == "atendido"
+    ]
+
+    total_atendidas_citas = len([
+        c for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    ])
+
+    ingresos_citas = sum(
+        calcular_precio(c.get("servicio", ""))
+        for c in citas_no_canceladas
+        if str(c.get("estado", "")).lower() == "atendida"
+    )
+
+    ingresos_walkins = sum(
+        calcular_precio(w.get("servicio", ""))
+        for w in walkins_atendidos_hoy
+    )
+
     resumen = {
         "total_citas": len(citas_no_canceladas),
         "total_canceladas": len(citas_canceladas),
-        "total_atendidas": len([
-            c for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        ]),
-        "total_ingresos": sum(
-            calcular_precio(c.get("servicio", ""))
-            for c in citas_no_canceladas
-            if str(c.get("estado", "")).lower() == "atendida"
-        )
+        "total_atendidas": total_atendidas_citas + len(walkins_atendidos_hoy),
+        "total_ingresos": ingresos_citas + ingresos_walkins
     }
 
     return jsonify({
