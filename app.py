@@ -378,6 +378,22 @@ def obtener_walkins_hoy(barbero_id=None):
 
     return []
 
+def obtener_walkins_fecha(fecha):
+    url = (
+        f"{SUPABASE_URL}/rest/v1/walk_in_queue"
+        f"?fecha=eq.{fecha}"
+        f"&order=hora_llegada.asc"
+    )
+
+    try:
+        res = session.get(url, headers=_headers(), timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print("Error obteniendo walk-ins por fecha:", e)
+
+    return []
 
 def obtener_walkin_por_id(walkin_id):
     url = f"{SUPABASE_URL}/rest/v1/walk_in_queue?id=eq.{walkin_id}"
@@ -1453,7 +1469,12 @@ def panel_dueno():
 
     barberos_info = obtener_todos_barberos()
     barberos_dict = {str(b.get("id")): b for b in barberos_info}
+    walkins_hoy = obtener_walkins_fecha(hoy)
 
+    walkins_por_barbero = {}
+    for w in walkins_hoy:
+        bid = str(w.get("barbero_id", ""))
+        walkins_por_barbero.setdefault(bid, []).append(w)
     for cita in citas_periodo:
         enriquecer_cita(cita, barberos_dict)
 
@@ -1484,7 +1505,7 @@ def panel_dueno():
         citas_barbero = citas_por_barbero.get(bid, [])
         canceladas_barbero = canceladas_por_barbero.get(bid, [])
 
-        walkins_hoy_barbero = obtener_walkins_barbero_fecha(bid, hoy)
+        walkins_hoy_barbero = walkins_por_barbero.get(bid, [])
         walkins_panel = [
             convertir_walkin_a_item_panel(w, barberos_dict)
             for w in walkins_hoy_barbero
@@ -1585,6 +1606,7 @@ def api_panel_admin():
 
     fecha_inicio = rango["inicio"]
     fecha_fin = rango["fin"]
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
 
     citas_periodo = obtener_citas_rango(fecha_inicio, fecha_fin)
 
@@ -1615,6 +1637,13 @@ def api_panel_admin():
         bid = str(cita.get("barbero_id", ""))
         canceladas_por_barbero.setdefault(bid, []).append(cita)
 
+    walkins_hoy = obtener_walkins_fecha(hoy)
+    walkins_por_barbero = {}
+
+    for w in walkins_hoy:
+        bid = str(w.get("barbero_id", ""))
+        walkins_por_barbero.setdefault(bid, []).append(w)
+
     stats = {}
     barberos_json = []
 
@@ -1628,7 +1657,15 @@ def api_panel_admin():
             if str(c.get("estado", "")).lower() == "atendida"
         ]
 
-        ganancia = sum(calcular_precio(c.get("servicio", "")) for c in atendidas)
+        walkins_hoy_barbero = walkins_por_barbero.get(bid, [])
+        walkins_atendidos = [
+            w for w in walkins_hoy_barbero
+            if str(w.get("estado", "")).lower() == "atendido"
+        ]
+
+        ganancia_citas = sum(calcular_precio(c.get("servicio", "")) for c in atendidas)
+        ganancia_walkins = sum(calcular_precio(w.get("servicio", "")) for w in walkins_atendidos)
+        ganancia = ganancia_citas + ganancia_walkins
 
         stats[bid] = {
             "nombre": barbero.get("nombre"),
@@ -1653,7 +1690,6 @@ def api_panel_admin():
             "activo": barbero.get("activo", False)
         })
 
-        walkins_hoy = obtener_walkins_hoy()
     walkins_atendidos_hoy = [
         w for w in walkins_hoy
         if str(w.get("estado", "")).lower() == "atendido"
@@ -1781,6 +1817,7 @@ def api_panel_admin_meta():
 
     fecha_inicio = rango["inicio"]
     fecha_fin = rango["fin"]
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
 
     citas_periodo = obtener_citas_rango(fecha_inicio, fecha_fin)
 
@@ -1800,7 +1837,7 @@ def api_panel_admin_meta():
         if str(c.get("estado", "")).lower() == "cancelada"
     ]
 
-    walkins_hoy = obtener_walkins_hoy()
+    walkins_hoy = obtener_walkins_fecha(hoy)
     walkins_atendidos_hoy = [
         w for w in walkins_hoy
         if str(w.get("estado", "")).lower() == "atendido"
