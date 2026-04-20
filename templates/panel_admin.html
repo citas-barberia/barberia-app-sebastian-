@@ -350,6 +350,11 @@
             color: #f5d76e;
             border: 1px solid rgba(212, 175, 55, 0.35);
         }
+        .cita-origen.walkin {
+    background: rgba(22, 163, 74, 0.16);
+    color: #86efac;
+    border: 1px solid rgba(22, 163, 74, 0.35);
+}
 
         .cita-vacia {
             color: #9ca3af;
@@ -610,9 +615,22 @@
                 {% if cita.estado == 'atendida' %}
                     <span class="badge-atendida">ATENDIDA</span>
                 {% else %}
-                    <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
-                        {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
-                    </span>
+                    <span class="cita-origen
+    {% if cita.origen == 'online' %}
+        online
+    {% elif cita.origen == 'walkin' %}
+        walkin
+    {% else %}
+        manual
+    {% endif %}">
+    {% if cita.origen == 'online' %}
+        Online
+    {% elif cita.origen == 'walkin' %}
+        Walk-in
+    {% else %}
+        Manual
+    {% endif %}
+</span>
                 {% endif %}
             </div>
 
@@ -660,9 +678,22 @@
                                     {% endif %}
                                 </div>
 
-                                <span class="cita-origen {% if cita.origen == 'online' %}online{% else %}manual{% endif %}">
-                                    {% if cita.origen == 'online' %}Online{% else %}Manual{% endif %}
-                                </span>
+                                <span class="cita-origen
+    {% if cita.origen == 'online' %}
+        online
+    {% elif cita.origen == 'walkin' %}
+        walkin
+    {% else %}
+        manual
+    {% endif %}">
+    {% if cita.origen == 'online' %}
+        Online
+    {% elif cita.origen == 'walkin' %}
+        Walk-in
+    {% else %}
+        Manual
+    {% endif %}
+</span>
                             </div>
 
                             <div class="cita-cliente">{{ cita.cliente_nombre }}</div>

@@ -411,6 +411,32 @@ def obtener_walkins_barbero_fecha(barbero_id, fecha):
 
     return []
 
+def convertir_walkin_a_item_panel(walkin, barberos_dict):
+    barbero_id = str(walkin.get("barbero_id", ""))
+    estado_walkin = str(walkin.get("estado", "")).lower()
+
+    if estado_walkin == "atendido":
+        estado_panel = "atendida"
+    elif estado_walkin == "cancelado":
+        estado_panel = "cancelada"
+    else:
+        estado_panel = "pendiente"
+
+    return {
+        "id": walkin.get("id"),
+        "cliente_nombre": walkin.get("nombre_cliente", "Cliente"),
+        "servicio": walkin.get("servicio", "Walk-in"),
+        "fecha": walkin.get("fecha"),
+        "hora": None,
+        "hora_formateada": "Walk-in",
+        "estado": estado_panel,
+        "barbero_id": int(barbero_id) if str(barbero_id).isdigit() else barbero_id,
+        "barbero_nombre": barberos_dict.get(barbero_id, {}).get("nombre", "Sin asignar"),
+        "origen": "walkin",
+        "tipo_visual": "walkin",
+        "precio": calcular_precio(walkin.get("servicio", "")),
+    }
+
 
 def enviar_whatsapp_texto(numero, mensaje):
     try:
@@ -1458,12 +1484,34 @@ def panel_dueno():
         citas_barbero = citas_por_barbero.get(bid, [])
         canceladas_barbero = canceladas_por_barbero.get(bid, [])
 
+        walkins_hoy_barbero = obtener_walkins_barbero_fecha(bid, hoy)
+        walkins_panel = [
+            convertir_walkin_a_item_panel(w, barberos_dict)
+            for w in walkins_hoy_barbero
+            if str(w.get("estado", "")).lower() != "cancelado"
+        ]
+
+        walkins_cancelados_panel = [
+            convertir_walkin_a_item_panel(w, barberos_dict)
+            for w in walkins_hoy_barbero
+            if str(w.get("estado", "")).lower() == "cancelado"
+        ]
+
+        citas_mostradas = citas_barbero + walkins_panel
+        citas_mostradas.sort(
+            key=lambda x: (
+                str(x.get("fecha", "")),
+                str(x.get("hora") or "99:99:99")
+            )
+        )
+
+        canceladas_mostradas = canceladas_barbero + walkins_cancelados_panel
+
         atendidas = [
             c for c in citas_barbero
             if str(c.get("estado", "")).lower() == "atendida"
         ]
 
-        walkins_hoy_barbero = obtener_walkins_barbero_fecha(bid, hoy)
         walkins_atendidos = [
             w for w in walkins_hoy_barbero
             if str(w.get("estado", "")).lower() == "atendido"
@@ -1475,15 +1523,14 @@ def panel_dueno():
 
         stats[bid] = {
             "nombre": barbero.get("nombre"),
-            "total": len(citas_barbero),
+            "total": len(citas_mostradas),
             "ganancia": ganancia,
             "activo": barbero.get("activo", False),
             "disponible_hoy": barbero.get("disponible_hoy", False),
-            "citas": citas_barbero,
-            "canceladas": canceladas_barbero,
-            "canceladas_total": len(canceladas_barbero)
+            "citas": citas_mostradas,
+            "canceladas": canceladas_mostradas,
+            "canceladas_total": len(canceladas_mostradas)
         }
-
         walkins_hoy = obtener_walkins_hoy()
     walkins_atendidos_hoy = [
         w for w in walkins_hoy
