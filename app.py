@@ -752,6 +752,11 @@ def index():
     c_id = request.cookies.get("cliente_id") or str(uuid.uuid4())
 
     barberos_info = obtener_todos_barberos()
+    orden_cliente = {"3": 1, "2": 2, "1": 3}
+    barberos_info = sorted(
+    barberos_info,
+    key=lambda b: orden_cliente.get(str(b.get("id")), 99)
+)
 
     barberos_visibles = {}
     for barbero in barberos_info:
@@ -781,6 +786,13 @@ def index():
 def api_barberos_disponibles():
     try:
         barberos_info = obtener_todos_barberos()
+
+        orden_cliente = {"3": 1, "2": 2, "1": 3}
+
+        barberos_info = sorted(
+            barberos_info,
+            key=lambda b: orden_cliente.get(str(b.get("id")), 99)
+        )
 
         barberos_visibles = {}
         for barbero in barberos_info:
