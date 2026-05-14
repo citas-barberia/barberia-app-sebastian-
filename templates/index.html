@@ -137,7 +137,11 @@ let ultimoBarberosJson = "";
 
 function construirOpcionesBarberos(barberos, seleccionadoActual) {
     const select = document.getElementById("barbero_id");
-    const ids = Object.keys(barberos || {});
+    const ordenCliente = {"3": 1, "2": 2, "1": 3};
+
+const ids = Object.keys(barberos || {}).sort((a, b) => {
+    return (ordenCliente[a] || 99) - (ordenCliente[b] || 99);
+});
 
     let html = '<option value="" disabled>Selecciona barbero</option>';
 
